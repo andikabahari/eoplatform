@@ -3,6 +3,8 @@ module github.com/andikabahari/eoplatform
 go 1.19
 
 require (
+	github.com/go-ozzo/ozzo-validation v3.6.0+incompatible
+	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/joho/godotenv v1.4.0
 	github.com/labstack/echo/v4 v4.9.1
 	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5
@@ -11,8 +13,8 @@ require (
 )
 
 require (
+	github.com/asaskevich/govalidator v0.0.0-20210307081110-f21760c49a8d // indirect
 	github.com/go-sql-driver/mysql v1.6.0 // indirect
-	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/labstack/gommon v0.4.0 // indirect
