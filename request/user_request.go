@@ -19,7 +19,7 @@ func (b BasicUser) Validate() error {
 		validation.Field(&b.Username, validation.Required),
 		validation.Field(&b.Password, validation.Required, validation.Length(8, 0)),
 		validation.Field(&b.Email, validation.Required, is.Email),
-		validation.Field(&b.Email, validation.Required),
+		validation.Field(&b.Address, validation.Required),
 	)
 }
 
