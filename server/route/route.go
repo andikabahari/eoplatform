@@ -15,4 +15,7 @@ func Setup(server *s.Server) {
 
 	registerHandler := handler.NewRegisterHandler(server)
 	server.Echo.POST("/v1/register", registerHandler.Register)
+
+	loginHandler := handler.NewLoginHandler(server)
+	server.Echo.POST("/v1/login", loginHandler.Login)
 }
