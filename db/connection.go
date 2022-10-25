@@ -24,9 +24,5 @@ func Init(cfg *config.Config) *gorm.DB {
 		log.Fatal("Can't connect to DB!")
 	}
 
-	// db.AutoMigrate(
-	// 	&model.User{},
-	// )
-
 	return db
 }
