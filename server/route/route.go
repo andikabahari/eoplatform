@@ -12,4 +12,7 @@ func Setup(server *s.Server) {
 
 	helloHandler := handler.NewHelloHandler(server)
 	server.Echo.GET("/", helloHandler.Greeting)
+
+	registerHandler := handler.NewRegisterHandler(server)
+	server.Echo.POST("/v1/register", registerHandler.Register)
 }
