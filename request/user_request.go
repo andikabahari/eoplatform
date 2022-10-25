@@ -1,8 +1,6 @@
 package request
 
 import (
-	"regexp"
-
 	validation "github.com/go-ozzo/ozzo-validation"
 	"github.com/go-ozzo/ozzo-validation/is"
 )
@@ -10,18 +8,18 @@ import (
 type BasicUser struct {
 	Name     string `json:"name"`
 	Username string `json:"username"`
-	Email    string `json:"email"`
 	Password string `json:"password"`
-	Role     string `json:"role"`
+	Email    string `json:"email"`
+	Address  string `json:"address"`
 }
 
-func (bu BasicUser) Validate() error {
-	return validation.ValidateStruct(&bu,
-		validation.Field(&bu.Name, validation.Required),
-		validation.Field(&bu.Username, validation.Required),
-		validation.Field(&bu.Email, validation.Required, is.Email),
-		validation.Field(&bu.Password, validation.Required, validation.Length(8, 0)),
-		validation.Field(&bu.Role, validation.Required, validation.Match(regexp.MustCompile("^(organizer|customer)$"))),
+func (b BasicUser) Validate() error {
+	return validation.ValidateStruct(&b,
+		validation.Field(&b.Name, validation.Required),
+		validation.Field(&b.Username, validation.Required),
+		validation.Field(&b.Password, validation.Required, validation.Length(8, 0)),
+		validation.Field(&b.Email, validation.Required, is.Email),
+		validation.Field(&b.Address, validation.Required),
 	)
 }
 

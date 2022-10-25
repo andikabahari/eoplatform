@@ -8,7 +8,7 @@ type User struct {
 	gorm.Model
 	Name     string
 	Username string `gorm:"index:,unique"`
-	Email    string
 	Password string
-	Role     string
+	Email    string
+	Address  string
 }
