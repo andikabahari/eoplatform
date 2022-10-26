@@ -12,6 +12,8 @@ type ServiceRepository interface {
 	Get(services *[]model.Service, keyword string)
 	Find(service *model.Service, id string)
 	Create(service *model.Service)
+	Update(service *model.Service, req *request.UpdateServiceRequest)
+	Delete(service *model.Service)
 }
 
 type serviceRepository struct {
@@ -45,4 +47,8 @@ func (r *serviceRepository) Update(service *model.Service, req *request.UpdateSe
 	service.Cost = req.Cost
 
 	r.db.Debug().Omit("User").Save(service)
+}
+
+func (r *serviceRepository) Delete(service *model.Service) {
+	r.db.Debug().Delete(service)
 }

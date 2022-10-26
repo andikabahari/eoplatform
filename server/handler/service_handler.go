@@ -115,3 +115,34 @@ func (h ServiceHandler) UpdateService(c echo.Context) error {
 		"data": response.NewServiceResponse(service),
 	})
 }
+
+func (h ServiceHandler) DeleteService(c echo.Context) error {
+	service := model.Service{}
+	serviceRepository := repository.NewServiceRepository(h.server.DB)
+	serviceRepository.Find(&service, c.Param("id"))
+
+	if service.ID == 0 {
+		return c.JSON(http.StatusNotFound, echo.Map{
+			"error": "service not found",
+		})
+	}
+
+	user := c.Get("user").(*jwt.Token)
+	claims := user.Claims.(*helper.JWTCustomClaims)
+
+	if service.UserID != claims.ID {
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"error": "unauthorized",
+		})
+	}
+
+	serviceRepository.Delete(&service)
+
+	return c.JSON(http.StatusOK, echo.Map{
+		"data": echo.Map{
+			"kind":    "service",
+			"id":      c.Param("id"),
+			"deleted": true,
+		},
+	})
+}
