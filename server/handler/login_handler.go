@@ -39,7 +39,9 @@ func (h *LoginHandler) Login(c echo.Context) error {
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
-		return err
+		return c.JSON(http.StatusNotFound, echo.Map{
+			"error": "invalid password",
+		})
 	}
 
 	token, err := helper.CreateToken(user.ID, user.Name)
