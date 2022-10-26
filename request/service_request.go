@@ -21,3 +21,7 @@ func (b BasicService) Validate() error {
 type CreateServiceRequest struct {
 	BasicService
 }
+
+type UpdateServiceRequest struct {
+	BasicService
+}

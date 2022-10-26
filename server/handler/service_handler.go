@@ -76,3 +76,42 @@ func (h ServiceHandler) CreateService(c echo.Context) error {
 		"data": response.NewServiceResponse(service),
 	})
 }
+
+func (h ServiceHandler) UpdateService(c echo.Context) error {
+	req := request.UpdateServiceRequest{}
+
+	if err := c.Bind(&req); err != nil {
+		return err
+	}
+
+	if err := req.Validate(); err != nil {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": err,
+		})
+	}
+
+	service := model.Service{}
+	serviceRepository := repository.NewServiceRepository(h.server.DB)
+	serviceRepository.Find(&service, c.Param("id"))
+
+	if service.ID == 0 {
+		return c.JSON(http.StatusNotFound, echo.Map{
+			"error": "service not found",
+		})
+	}
+
+	user := c.Get("user").(*jwt.Token)
+	claims := user.Claims.(*helper.JWTCustomClaims)
+
+	if service.UserID != claims.ID {
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"error": "unauthorized",
+		})
+	}
+
+	serviceRepository.Update(&service, &req)
+
+	return c.JSON(http.StatusOK, echo.Map{
+		"data": response.NewServiceResponse(service),
+	})
+}

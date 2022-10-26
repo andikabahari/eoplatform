@@ -30,4 +30,5 @@ func Setup(server *s.Server) {
 	server.Echo.GET("/v1/services", serviceHandler.GetServices)
 	server.Echo.GET("/v1/services/:id", serviceHandler.FindService)
 	restricted.POST("/v1/services", serviceHandler.CreateService)
+	restricted.PUT("/v1/services/:id", serviceHandler.UpdateService)
 }

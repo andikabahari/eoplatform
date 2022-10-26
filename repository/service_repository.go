@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/andikabahari/eoplatform/model"
+	"github.com/andikabahari/eoplatform/request"
 	"gorm.io/gorm"
 )
 
@@ -36,4 +37,12 @@ func (r *serviceRepository) Find(service *model.Service, id string) {
 
 func (r *serviceRepository) Create(service *model.Service) {
 	r.db.Debug().Save(service)
+}
+
+func (r *serviceRepository) Update(service *model.Service, req *request.UpdateServiceRequest) {
+	service.Name = req.Name
+	service.Description = req.Description
+	service.Cost = req.Cost
+
+	r.db.Debug().Omit("User").Save(service)
 }
