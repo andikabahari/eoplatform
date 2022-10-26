@@ -14,20 +14,20 @@ type JWTCustomClaims struct {
 }
 
 func CreateToken(id uint, name string) (string, error) {
+	authConfig := config.LoadAuthConfig()
+
 	claims := JWTCustomClaims{
-		id,
-		name,
-		jwt.StandardClaims{
+		ID:   id,
+		Name: name,
+		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: time.Now().Add(1 * time.Hour).Unix(),
 		},
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-
-	signed, err := token.SignedString([]byte(config.LoadAuthConfig().Secret))
+	token, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(authConfig.Secret))
 	if err != nil {
 		return "", err
 	}
 
-	return signed, nil
+	return token, nil
 }

@@ -10,7 +10,7 @@ type UserResponse struct {
 	Address  string `json:"address"`
 }
 
-func NewUserResponse(user model.User) *UserResponse {
+func NewUserResponse(user model.User) UserResponse {
 	res := UserResponse{}
 	res.ID = user.ID
 	res.Name = user.Name
@@ -18,5 +18,5 @@ func NewUserResponse(user model.User) *UserResponse {
 	res.Email = user.Email
 	res.Address = user.Address
 
-	return &res
+	return res
 }
