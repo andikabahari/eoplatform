@@ -25,4 +25,7 @@ func Setup(server *s.Server) {
 		Claims:     &helper.JWTCustomClaims{},
 		SigningKey: []byte(server.Config.Auth.Secret),
 	}))
+
+	serviceHandler := handler.NewServiceHandler(server)
+	restricted.POST("/v1/services", serviceHandler.CreateService)
 }
