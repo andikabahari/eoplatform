@@ -25,4 +25,11 @@ func Setup(server *s.Server) {
 		Claims:     &helper.JWTCustomClaims{},
 		SigningKey: []byte(server.Config.Auth.Secret),
 	}))
+
+	serviceHandler := handler.NewServiceHandler(server)
+	server.Echo.GET("/v1/services", serviceHandler.GetServices)
+	server.Echo.GET("/v1/services/:id", serviceHandler.FindService)
+	restricted.POST("/v1/services", serviceHandler.CreateService)
+	restricted.PUT("/v1/services/:id", serviceHandler.UpdateService)
+	restricted.DELETE("/v1/services/:id", serviceHandler.DeleteService)
 }
