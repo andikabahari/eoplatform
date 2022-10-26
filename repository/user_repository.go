@@ -11,6 +11,7 @@ type UserRepository interface {
 	FindByUsername(user *model.User, username string)
 	Create(user *model.User)
 	Update(user *model.User, req *request.UpdateUserRequest)
+	ResetPassword(user *model.User, password string)
 }
 
 type userRepository struct {
@@ -38,6 +39,12 @@ func (r *userRepository) Update(user *model.User, req *request.UpdateUserRequest
 	user.Username = req.Username
 	user.Email = req.Email
 	user.Address = req.Address
+
+	r.db.Debug().Save(user)
+}
+
+func (r *userRepository) ResetPassword(user *model.User, password string) {
+	user.Password = password
 
 	r.db.Debug().Save(user)
 }

@@ -29,6 +29,7 @@ func Setup(server *s.Server) {
 	accountHandler := handler.NewAccountHandler(server)
 	restricted.GET("/v1/account", accountHandler.GetAccount)
 	restricted.PUT("/v1/account", accountHandler.UpdateAccount)
+	restricted.PUT("/v1/account/password", accountHandler.ResetPassword)
 
 	serviceHandler := handler.NewServiceHandler(server)
 	server.Echo.GET("/v1/services", serviceHandler.GetServices)

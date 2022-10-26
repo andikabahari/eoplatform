@@ -47,3 +47,16 @@ func (r UpdateUserRequest) Validate() error {
 		validation.Field(&r.Address, validation.Required),
 	)
 }
+
+type UpdateUserPasswordRequest struct {
+	Password        string `json:"password"`
+	ConfirmPassword string `json:"confirm_password"`
+	OldPassword     string `json:"old_password"`
+}
+
+func (r UpdateUserPasswordRequest) Validate() error {
+	return validation.ValidateStruct(&r,
+		validation.Field(&r.Password, validation.Required, validation.Length(8, 0)),
+		validation.Field(&r.OldPassword, validation.Required),
+	)
+}
