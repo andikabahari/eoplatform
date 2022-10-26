@@ -11,5 +11,4 @@ type User struct {
 	Password string
 	Email    string
 	Address  string
-	Services []Service
 }

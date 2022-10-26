@@ -27,5 +27,7 @@ func Setup(server *s.Server) {
 	}))
 
 	serviceHandler := handler.NewServiceHandler(server)
+	server.Echo.GET("/v1/services", serviceHandler.GetServices)
+	server.Echo.GET("/v1/services/:id", serviceHandler.FindService)
 	restricted.POST("/v1/services", serviceHandler.CreateService)
 }
