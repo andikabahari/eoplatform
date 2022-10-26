@@ -1,6 +1,7 @@
 package route
 
 import (
+	"github.com/andikabahari/eoplatform/helper"
 	s "github.com/andikabahari/eoplatform/server"
 	"github.com/andikabahari/eoplatform/server/handler"
 	"github.com/labstack/echo/v4/middleware"
@@ -18,4 +19,10 @@ func Setup(server *s.Server) {
 
 	loginHandler := handler.NewLoginHandler(server)
 	server.Echo.POST("/v1/login", loginHandler.Login)
+
+	restricted := server.Echo.Group("")
+	restricted.Use(middleware.JWTWithConfig(middleware.JWTConfig{
+		Claims:     &helper.JWTCustomClaims{},
+		SigningKey: []byte(server.Config.Auth.Secret),
+	}))
 }
