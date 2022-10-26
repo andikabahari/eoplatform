@@ -31,3 +31,32 @@ type LoginRequest struct {
 type CreateUserRequest struct {
 	BasicUser
 }
+
+type UpdateUserRequest struct {
+	Name     string `json:"name"`
+	Username string `json:"username"`
+	Email    string `json:"email"`
+	Address  string `json:"address"`
+}
+
+func (r UpdateUserRequest) Validate() error {
+	return validation.ValidateStruct(&r,
+		validation.Field(&r.Name, validation.Required),
+		validation.Field(&r.Username, validation.Required),
+		validation.Field(&r.Email, validation.Required, is.Email),
+		validation.Field(&r.Address, validation.Required),
+	)
+}
+
+type UpdateUserPasswordRequest struct {
+	Password        string `json:"password"`
+	ConfirmPassword string `json:"confirm_password"`
+	OldPassword     string `json:"old_password"`
+}
+
+func (r UpdateUserPasswordRequest) Validate() error {
+	return validation.ValidateStruct(&r,
+		validation.Field(&r.Password, validation.Required, validation.Length(8, 0)),
+		validation.Field(&r.OldPassword, validation.Required),
+	)
+}

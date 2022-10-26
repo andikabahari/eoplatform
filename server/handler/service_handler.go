@@ -21,7 +21,7 @@ func NewServiceHandler(server *s.Server) *ServiceHandler {
 	return &ServiceHandler{server}
 }
 
-func (h ServiceHandler) GetServices(c echo.Context) error {
+func (h *ServiceHandler) GetServices(c echo.Context) error {
 	services := make([]model.Service, 0)
 	serviceRepository := repository.NewServiceRepository(h.server.DB)
 	serviceRepository.Get(&services, c.QueryParam("q"))
@@ -31,7 +31,7 @@ func (h ServiceHandler) GetServices(c echo.Context) error {
 	})
 }
 
-func (h ServiceHandler) FindService(c echo.Context) error {
+func (h *ServiceHandler) FindService(c echo.Context) error {
 	service := model.Service{}
 	serviceRepository := repository.NewServiceRepository(h.server.DB)
 	serviceRepository.Find(&service, c.Param("id"))
@@ -47,7 +47,7 @@ func (h ServiceHandler) FindService(c echo.Context) error {
 	})
 }
 
-func (h ServiceHandler) CreateService(c echo.Context) error {
+func (h *ServiceHandler) CreateService(c echo.Context) error {
 	req := request.CreateServiceRequest{}
 
 	if err := c.Bind(&req); err != nil {
@@ -77,7 +77,7 @@ func (h ServiceHandler) CreateService(c echo.Context) error {
 	})
 }
 
-func (h ServiceHandler) UpdateService(c echo.Context) error {
+func (h *ServiceHandler) UpdateService(c echo.Context) error {
 	req := request.UpdateServiceRequest{}
 
 	if err := c.Bind(&req); err != nil {
@@ -116,7 +116,7 @@ func (h ServiceHandler) UpdateService(c echo.Context) error {
 	})
 }
 
-func (h ServiceHandler) DeleteService(c echo.Context) error {
+func (h *ServiceHandler) DeleteService(c echo.Context) error {
 	service := model.Service{}
 	serviceRepository := repository.NewServiceRepository(h.server.DB)
 	serviceRepository.Find(&service, c.Param("id"))
