@@ -42,16 +42,16 @@ func (h *AccountHandler) GetAccount(c echo.Context) error {
 	})
 }
 
-func (h *AccountHandler) GetOrders(c echo.Context) error {
+func (h *AccountHandler) GetMyOrders(c echo.Context) error {
 	user := c.Get("user").(*jwt.Token)
 	claims := user.Claims.(*helper.JWTCustomClaims)
 
 	orders := make([]model.Order, 0)
 	orderRepository := repository.NewOrderRepository(h.server.DB)
-	orderRepository.Get(&orders, claims.ID)
+	orderRepository.GetMyOrders(&orders, claims.ID)
 
 	return c.JSON(http.StatusOK, echo.Map{
-		"data": response.NewUserOrdersResponse(orders),
+		"data": response.NewMyOrdersResponse(orders),
 	})
 }
 

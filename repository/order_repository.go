@@ -6,6 +6,8 @@ import (
 )
 
 type OrderRepository interface {
+	GetMyOrders(orders *[]model.Order, userID uint)
+	Find(order *model.Order, id string)
 	Create(order *model.Order)
 }
 
@@ -17,7 +19,7 @@ func NewOrderRepository(db *gorm.DB) *orderRepository {
 	return &orderRepository{db}
 }
 
-func (r *orderRepository) Get(orders *[]model.Order, userID uint) {
+func (r *orderRepository) GetMyOrders(orders *[]model.Order, userID uint) {
 	r.db.Debug().Preload("User").Preload("Services").Where("user_id = ?", userID).Find(orders)
 }
 

@@ -30,7 +30,7 @@ func Setup(server *s.Server) {
 	restricted.GET("/v1/account", accountHandler.GetAccount)
 	restricted.PUT("/v1/account", accountHandler.UpdateAccount)
 	restricted.PUT("/v1/account/password", accountHandler.ResetPassword)
-	restricted.GET("/v1/account/orders", accountHandler.GetOrders)
+	restricted.GET("/v1/account/my-orders", accountHandler.GetMyOrders)
 
 	serviceHandler := handler.NewServiceHandler(server)
 	server.Echo.GET("/v1/services", serviceHandler.GetServices)

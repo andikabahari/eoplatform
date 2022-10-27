@@ -39,7 +39,7 @@ func NewOrderResponse(order model.Order) *OrderResponse {
 	return &res
 }
 
-func NewUserOrdersResponse(orders []model.Order) *[]OrderResponse {
+func NewMyOrdersResponse(orders []model.Order) *[]OrderResponse {
 	res := make([]OrderResponse, 0)
 	for i, order := range orders {
 		tmp := OrderResponse{}
