@@ -20,3 +20,7 @@ func NewOrderRepository(db *gorm.DB) *orderRepository {
 func (r *orderRepository) Create(order *model.Order) {
 	r.db.Debug().Omit("Services.*").Save(order)
 }
+
+func (r *orderRepository) Find(order *model.Order, id string) {
+	r.db.Debug().Preload("User").Preload("Services").Where("id = ?", id).Find(order)
+}

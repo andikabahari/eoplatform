@@ -40,4 +40,6 @@ func Setup(server *s.Server) {
 
 	orderHandler := handler.NewOrderHandler(server)
 	restricted.POST("/v1/orders", orderHandler.CreateOrder)
+	restricted.GET("/v1/orders/:id/accept", orderHandler.AcceptOrCompleteOrder)
+	restricted.GET("/v1/orders/:id/complete", orderHandler.AcceptOrCompleteOrder)
 }

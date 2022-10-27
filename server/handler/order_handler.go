@@ -3,6 +3,7 @@ package handler
 import (
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/andikabahari/eoplatform/helper"
 	"github.com/andikabahari/eoplatform/model"
@@ -12,6 +13,7 @@ import (
 	s "github.com/andikabahari/eoplatform/server"
 	"github.com/golang-jwt/jwt"
 	"github.com/labstack/echo/v4"
+	"gorm.io/gorm/clause"
 )
 
 type OrderHandler struct {
@@ -73,6 +75,41 @@ func (h *OrderHandler) CreateOrder(c echo.Context) error {
 	orderRepository.Create(&order)
 
 	order.User = user
+
+	return c.JSON(http.StatusOK, echo.Map{
+		"data": response.NewOrderResponse(order),
+	})
+}
+
+func (h *OrderHandler) AcceptOrCompleteOrder(c echo.Context) error {
+	order := model.Order{}
+	orderRepository := repository.NewOrderRepository(h.server.DB)
+	orderRepository.Find(&order, c.Param("id"))
+
+	if order.ID == 0 {
+		return c.JSON(http.StatusNotFound, echo.Map{
+			"error": "order not found",
+		})
+	}
+
+	user := c.Get("user").(*jwt.Token)
+	claims := user.Claims.(*helper.JWTCustomClaims)
+
+	if order.UserID != claims.ID {
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"error": "unauthorized",
+		})
+	}
+
+	segment := strings.Split(c.Path(), "/")[4]
+	if segment == "accept" {
+		order.IsAccepted = true
+	}
+	if segment == "complete" && order.IsAccepted {
+		order.IsCompleted = true
+	}
+
+	h.server.DB.Debug().Omit(clause.Associations).Save(order)
 
 	return c.JSON(http.StatusOK, echo.Map{
 		"data": response.NewOrderResponse(order),
