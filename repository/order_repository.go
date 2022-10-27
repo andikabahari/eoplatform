@@ -17,6 +17,10 @@ func NewOrderRepository(db *gorm.DB) *orderRepository {
 	return &orderRepository{db}
 }
 
+func (r *orderRepository) Get(orders *[]model.Order, userID uint) {
+	r.db.Debug().Preload("User").Preload("Services").Where("user_id = ?", userID).Find(orders)
+}
+
 func (r *orderRepository) Create(order *model.Order) {
 	r.db.Debug().Omit("Services.*").Save(order)
 }
