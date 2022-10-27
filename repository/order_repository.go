@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"database/sql"
+
 	"github.com/andikabahari/eoplatform/model"
 	"gorm.io/gorm"
 )
@@ -25,8 +27,16 @@ func (r *orderRepository) GetMyOrders(orders *[]model.Order, userID uint) {
 }
 
 func (r *orderRepository) GetCustomerOrders(orders *[]model.Order, userID uint) {
-	// Need to be fixed.
-	r.db.Debug().Preload("User").Preload("Services").Where("user_id != ?", userID).Find(orders)
+	query := "SELECT DISTINCT o.id FROM orders o " +
+		"JOIN users u ON u.id=o.user_id " +
+		"JOIN order_services os ON os.order_id=o.id " +
+		"JOIN services s ON s.id=os.service_id " +
+		"WHERE u.id!=@UserID AND s.user_id=@ServiceUserID"
+
+	r.db.Debug().Preload("User").Preload("Services").Where("id IN (?)", r.db.Raw(query,
+		sql.Named("UserID", userID),
+		sql.Named("ServiceUserID", userID),
+	)).Find(orders)
 }
 
 func (r *orderRepository) Create(order *model.Order) {
