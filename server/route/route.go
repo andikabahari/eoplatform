@@ -30,6 +30,8 @@ func Setup(server *s.Server) {
 	restricted.GET("/v1/account", accountHandler.GetAccount)
 	restricted.PUT("/v1/account", accountHandler.UpdateAccount)
 	restricted.PUT("/v1/account/password", accountHandler.ResetPassword)
+	restricted.GET("/v1/account/my-orders", accountHandler.GetMyOrders)
+	restricted.GET("/v1/account/customer-orders", accountHandler.GetCustomerOrders)
 
 	serviceHandler := handler.NewServiceHandler(server)
 	server.Echo.GET("/v1/services", serviceHandler.GetServices)
@@ -37,4 +39,9 @@ func Setup(server *s.Server) {
 	restricted.POST("/v1/services", serviceHandler.CreateService)
 	restricted.PUT("/v1/services/:id", serviceHandler.UpdateService)
 	restricted.DELETE("/v1/services/:id", serviceHandler.DeleteService)
+
+	orderHandler := handler.NewOrderHandler(server)
+	restricted.POST("/v1/orders", orderHandler.CreateOrder)
+	restricted.GET("/v1/orders/:id/accept", orderHandler.AcceptOrCompleteOrder)
+	restricted.GET("/v1/orders/:id/complete", orderHandler.AcceptOrCompleteOrder)
 }
