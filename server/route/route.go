@@ -37,4 +37,7 @@ func Setup(server *s.Server) {
 	restricted.POST("/v1/services", serviceHandler.CreateService)
 	restricted.PUT("/v1/services/:id", serviceHandler.UpdateService)
 	restricted.DELETE("/v1/services/:id", serviceHandler.DeleteService)
+
+	orderHnadler := handler.NewOrderHandler(server)
+	restricted.POST("/v1/orders", orderHnadler.CreateOrder)
 }
