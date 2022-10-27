@@ -55,6 +55,20 @@ func (h *AccountHandler) GetMyOrders(c echo.Context) error {
 	})
 }
 
+func (h *AccountHandler) GetCustomerOrders(c echo.Context) error {
+	user := c.Get("user").(*jwt.Token)
+	claims := user.Claims.(*helper.JWTCustomClaims)
+
+	fmt.Println("hey", claims.ID)
+	orders := make([]model.Order, 0)
+	orderRepository := repository.NewOrderRepository(h.server.DB)
+	orderRepository.GetCustomerOrders(&orders, claims.ID)
+
+	return c.JSON(http.StatusOK, echo.Map{
+		"data": response.NewCustomerOrdersResponse(orders),
+	})
+}
+
 func (h *AccountHandler) UpdateAccount(c echo.Context) error {
 	req := request.UpdateUserRequest{}
 
