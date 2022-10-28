@@ -44,4 +44,7 @@ func Setup(server *s.Server) {
 	restricted.POST("/v1/orders", orderHandler.CreateOrder)
 	restricted.GET("/v1/orders/:id/accept", orderHandler.AcceptOrCompleteOrder)
 	restricted.GET("/v1/orders/:id/complete", orderHandler.AcceptOrCompleteOrder)
+
+	feedbackHandler := handler.NewFeedbackHandler(server)
+	restricted.POST("/v1/feedbacks", feedbackHandler.CreateFeedback)
 }
