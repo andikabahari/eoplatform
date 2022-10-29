@@ -92,8 +92,8 @@ func (h *OrderHandler) AcceptOrCompleteOrder(c echo.Context) error {
 		})
 	}
 
-	user := c.Get("user").(*jwt.Token)
-	claims := user.Claims.(*helper.JWTCustomClaims)
+	userToken := c.Get("user").(*jwt.Token)
+	claims := userToken.Claims.(*helper.JWTCustomClaims)
 
 	if order.UserID != claims.ID {
 		return c.JSON(http.StatusUnauthorized, echo.Map{
@@ -101,12 +101,21 @@ func (h *OrderHandler) AcceptOrCompleteOrder(c echo.Context) error {
 		})
 	}
 
+	message := ""
 	segment := strings.Split(c.Path(), "/")[4]
 	if segment == "accept" {
 		order.IsAccepted = true
+		message = "Your request has been accepted, please contact us as soon as possible."
 	}
 	if segment == "complete" && order.IsAccepted {
 		order.IsCompleted = true
+		message = "Your order has been completed."
+	}
+
+	if message != "" {
+		if err := helper.SendEmail([]string{order.User.Email}, message); err != nil {
+			return err
+		}
 	}
 
 	h.server.DB.Debug().Omit(clause.Associations).Save(order)

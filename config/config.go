@@ -8,9 +8,11 @@ import (
 )
 
 type Config struct {
-	DB   DBConfig
-	Auth AuthConfig
-	HTTP HTTPConfig
+	DB    DBConfig
+	Auth  AuthConfig
+	HTTP  HTTPConfig
+	SMTP  SMTPConfig
+	Email EmailConfig
 }
 
 func NewConfig() *Config {
@@ -22,8 +24,10 @@ func NewConfig() *Config {
 	}
 
 	return &Config{
-		DB:   LoadDBConfig(),
-		Auth: LoadAuthConfig(),
-		HTTP: LoadHTTPConfig(),
+		DB:    LoadDBConfig(),
+		Auth:  LoadAuthConfig(),
+		HTTP:  LoadHTTPConfig(),
+		SMTP:  LoadSMTPConfig(),
+		Email: LoadEmailConfig(),
 	}
 }
