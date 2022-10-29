@@ -44,6 +44,17 @@ func (h *FeedbackHandler) CreateFeedback(c echo.Context) error {
 	feedback.FromUserID = claims.ID
 	feedback.ToUserID = req.ToUserID
 
+	score, err := helper.AnalyzeSentiment(req.Description)
+	if err != nil {
+		return err
+	}
+
+	if score >= 0 {
+		feedback.Positive = float64(score)
+	} else {
+		feedback.Negative = float64(score)
+	}
+
 	feedbackRepository := repository.NewFeedbackRepository(h.server.DB)
 	feedbackRepository.Create(&feedback)
 
