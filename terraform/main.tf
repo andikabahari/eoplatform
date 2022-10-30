@@ -53,8 +53,8 @@ module "cloud_run" {
   }
 
   limits = {
-    "cpu" : "500m",
-    "memory" : "512Mi",
+    "cpu" : "1000m",
+    "memory" : "1024Mi",
   }
 
   env_vars = var.env_vars
