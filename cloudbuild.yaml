@@ -23,6 +23,9 @@ steps:
         'deploy',
         'eoplatform',
         '--image=gcr.io/$PROJECT_ID/eoplatform:$SHORT_SHA',
+        '--region=asia-southeast2',
+        '--platform=managed',
+        '--allow-unauthenticated',
       ]
 
 # Store image
