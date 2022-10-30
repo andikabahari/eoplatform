@@ -31,7 +31,12 @@ module "cloud_run" {
   service_name = "eoplatform"
   project_id   = var.project
   location     = var.region
-  image        = "docker.io/andikabahari/eoplatform"
+  image        = "gcr.io/testenv-357307/eoplatform"
+
+  ports = {
+    "name" : "http1",
+    "port" : var.env_vars[index(var.env_vars.*.name, "HTTP_PORT")].value
+  }
 
   members = ["allUsers"]
 
