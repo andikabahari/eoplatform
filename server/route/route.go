@@ -11,40 +11,41 @@ func Setup(server *s.Server) {
 	server.Echo.Use(middleware.Recover())
 	server.Echo.Use(middleware.Logger())
 
+	auth := middleware.JWTWithConfig(middleware.JWTConfig{
+		Claims:     &helper.JWTCustomClaims{},
+		SigningKey: []byte(server.Config.Auth.Secret),
+	})
+
 	helloHandler := handler.NewHelloHandler(server)
 	server.Echo.GET("/", helloHandler.Greeting)
 
+	v1 := server.Echo.Group("/v1")
+
 	registerHandler := handler.NewRegisterHandler(server)
-	server.Echo.POST("/v1/register", registerHandler.Register)
+	v1.POST("/register", registerHandler.Register)
 
 	loginHandler := handler.NewLoginHandler(server)
-	server.Echo.POST("/v1/login", loginHandler.Login)
-
-	restricted := server.Echo.Group("")
-	restricted.Use(middleware.JWTWithConfig(middleware.JWTConfig{
-		Claims:     &helper.JWTCustomClaims{},
-		SigningKey: []byte(server.Config.Auth.Secret),
-	}))
+	v1.POST("/login", loginHandler.Login)
 
 	accountHandler := handler.NewAccountHandler(server)
-	restricted.GET("/v1/account", accountHandler.GetAccount)
-	restricted.PUT("/v1/account", accountHandler.UpdateAccount)
-	restricted.PUT("/v1/account/password", accountHandler.ResetPassword)
-	restricted.GET("/v1/account/my-orders", accountHandler.GetMyOrders)
-	restricted.GET("/v1/account/customer-orders", accountHandler.GetCustomerOrders)
+	v1.GET("/account", accountHandler.GetAccount, auth)
+	v1.PUT("/account", accountHandler.UpdateAccount, auth)
+	v1.PUT("/account/password", accountHandler.ResetPassword, auth)
+	v1.GET("/account/my-orders", accountHandler.GetMyOrders, auth)
+	v1.GET("/account/customer-orders", accountHandler.GetCustomerOrders, auth)
 
 	serviceHandler := handler.NewServiceHandler(server)
-	server.Echo.GET("/v1/services", serviceHandler.GetServices)
-	server.Echo.GET("/v1/services/:id", serviceHandler.FindService)
-	restricted.POST("/v1/services", serviceHandler.CreateService)
-	restricted.PUT("/v1/services/:id", serviceHandler.UpdateService)
-	restricted.DELETE("/v1/services/:id", serviceHandler.DeleteService)
+	v1.GET("/services", serviceHandler.GetServices)
+	v1.GET("/services/:id", serviceHandler.FindService)
+	v1.POST("/services", serviceHandler.CreateService, auth)
+	v1.PUT("/services/:id", serviceHandler.UpdateService, auth)
+	v1.DELETE("/services/:id", serviceHandler.DeleteService, auth)
 
 	orderHandler := handler.NewOrderHandler(server)
-	restricted.POST("/v1/orders", orderHandler.CreateOrder)
-	restricted.GET("/v1/orders/:id/accept", orderHandler.AcceptOrCompleteOrder)
-	restricted.GET("/v1/orders/:id/complete", orderHandler.AcceptOrCompleteOrder)
+	v1.POST("/orders", orderHandler.CreateOrder, auth)
+	v1.GET("/orders/:id/accept", orderHandler.AcceptOrCompleteOrder, auth)
+	v1.GET("/orders/:id/complete", orderHandler.AcceptOrCompleteOrder, auth)
 
 	feedbackHandler := handler.NewFeedbackHandler(server)
-	restricted.POST("/v1/feedbacks", feedbackHandler.CreateFeedback)
+	v1.POST("/feedbacks", feedbackHandler.CreateFeedback, auth)
 }

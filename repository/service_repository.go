@@ -43,8 +43,11 @@ func (r *serviceRepository) Create(service *model.Service) {
 
 func (r *serviceRepository) Update(service *model.Service, req *request.UpdateServiceRequest) {
 	service.Name = req.Name
-	service.Description = req.Description
 	service.Cost = req.Cost
+	service.Phone = req.Phone
+	service.Email = req.Email
+	service.IsPublished = req.IsPublished
+	service.Description = req.Description
 
 	r.db.Debug().Omit("User").Save(service)
 }

@@ -66,8 +66,11 @@ func (h *ServiceHandler) CreateService(c echo.Context) error {
 	service := model.Service{}
 	service.UserID = claims.ID
 	service.Name = req.Name
-	service.Description = req.Description
 	service.Cost = req.Cost
+	service.Phone = req.Phone
+	service.Email = req.Email
+	service.IsPublished = req.IsPublished
+	service.Description = req.Description
 
 	serviceRepository := repository.NewServiceRepository(h.server.DB)
 	serviceRepository.Create(&service)
@@ -106,6 +109,15 @@ func (h *ServiceHandler) UpdateService(c echo.Context) error {
 	if service.UserID != claims.ID {
 		return c.JSON(http.StatusUnauthorized, echo.Map{
 			"error": "unauthorized",
+		})
+	}
+
+	count := 0
+	query := "SELECT COUNT(1) FROM order_services WHERE service_id = ?"
+	h.server.DB.Raw(query, service.ID).Scan(&count)
+	if count > 0 {
+		return c.JSON(http.StatusForbidden, echo.Map{
+			"error": "forbidden",
 		})
 	}
 
