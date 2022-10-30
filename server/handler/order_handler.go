@@ -68,6 +68,9 @@ func (h *OrderHandler) CreateOrder(c echo.Context) error {
 	order := model.Order{}
 	order.IsAccepted = false
 	order.IsCompleted = false
+	order.Phone = req.Phone
+	order.Email = req.Email
+	order.Address = req.Address
 	order.UserID = claims.ID
 	order.Services = services
 
