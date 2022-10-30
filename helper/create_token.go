@@ -14,11 +14,12 @@ type JWTCustomClaims struct {
 }
 
 func CreateToken(id uint, name string) (string, error) {
+	exp := time.Duration(config.LoadAuthConfig().ExpHours) * time.Hour
 	claims := JWTCustomClaims{
 		id,
 		name,
 		jwt.StandardClaims{
-			ExpiresAt: time.Now().Add(1 * time.Hour).Unix(),
+			ExpiresAt: time.Now().Add(exp).Unix(),
 		},
 	}
 
