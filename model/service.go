@@ -7,6 +7,9 @@ type Service struct {
 	UserID      uint
 	User        User
 	Name        string
-	Description string
 	Cost        float64
+	Phone       string
+	Email       string
+	IsPublished bool
+	Description string
 }
