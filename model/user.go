@@ -9,6 +9,4 @@ type User struct {
 	Name     string
 	Username string `gorm:"index:,unique"`
 	Password string
-	Email    string
-	Address  string
 }

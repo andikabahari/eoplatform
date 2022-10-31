@@ -116,7 +116,7 @@ func (h *OrderHandler) AcceptOrCompleteOrder(c echo.Context) error {
 	}
 
 	if message != "" {
-		if err := helper.SendEmail([]string{order.User.Email}, message); err != nil {
+		if err := helper.SendEmail([]string{order.Email}, message); err != nil {
 			return err
 		}
 	}
