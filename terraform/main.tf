@@ -38,6 +38,8 @@ module "cloud_run" {
     "port" : var.env_vars[index(var.env_vars.*.name, "HTTP_PORT")].value
   }
 
+  env_vars = var.env_vars
+
   members = ["allUsers"]
 
   template_annotations = {
@@ -57,5 +59,5 @@ module "cloud_run" {
     "memory" : "1024Mi",
   }
 
-  env_vars = var.env_vars
+  container_concurrency = 80
 }
