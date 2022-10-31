@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/andikabahari/eoplatform/helper"
@@ -59,8 +58,8 @@ func (h *FeedbackHandler) CreateFeedback(c echo.Context) error {
 	feedbackRepository.Create(&feedback)
 
 	userRepository := repository.NewUserRepository(h.server.DB)
-	userRepository.Find(&feedback.FromUser, fmt.Sprintf("%d", claims.ID))
-	userRepository.Find(&feedback.ToUser, fmt.Sprintf("%d", req.ToUserID))
+	userRepository.Find(&feedback.FromUser, claims.ID)
+	userRepository.Find(&feedback.ToUser, req.ToUserID)
 
 	return c.JSON(http.StatusOK, echo.Map{
 		"data": response.NewFeedbackResponse(feedback),

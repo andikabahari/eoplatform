@@ -7,7 +7,7 @@ import (
 )
 
 type UserRepository interface {
-	Find(user *model.User, id string)
+	Find(user *model.User, id uint)
 	FindByUsername(user *model.User, username string)
 	Create(user *model.User)
 	Update(user *model.User, req *request.UpdateUserRequest)
@@ -22,7 +22,7 @@ func NewUserRepository(db *gorm.DB) *userRepository {
 	return &userRepository{db}
 }
 
-func (r *userRepository) Find(user *model.User, id string) {
+func (r *userRepository) Find(user *model.User, id uint) {
 	r.db.Debug().Where("id = ?", id).First(user)
 }
 
@@ -37,8 +37,6 @@ func (r *userRepository) Create(user *model.User) {
 func (r *userRepository) Update(user *model.User, req *request.UpdateUserRequest) {
 	user.Name = req.Name
 	user.Username = req.Username
-	user.Email = req.Email
-	user.Address = req.Address
 
 	r.db.Debug().Save(user)
 }
