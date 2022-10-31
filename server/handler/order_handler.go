@@ -63,7 +63,7 @@ func (h *OrderHandler) CreateOrder(c echo.Context) error {
 
 	user := model.User{}
 	userRepository := repository.NewUserRepository(h.server.DB)
-	userRepository.Find(&user, fmt.Sprintf("%d", claims.ID))
+	userRepository.Find(&user, claims.ID)
 
 	order := model.Order{}
 	order.IsAccepted = false

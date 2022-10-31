@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/andikabahari/eoplatform/helper"
@@ -29,7 +28,7 @@ func (h *AccountHandler) GetAccount(c echo.Context) error {
 
 	user := model.User{}
 	userRepository := repository.NewUserRepository(h.server.DB)
-	userRepository.Find(&user, fmt.Sprintf("%d", claims.ID))
+	userRepository.Find(&user, claims.ID)
 
 	if user.ID == 0 {
 		return c.JSON(http.StatusNotFound, echo.Map{
@@ -86,7 +85,7 @@ func (h *AccountHandler) UpdateAccount(c echo.Context) error {
 
 	user := model.User{}
 	userRepository := repository.NewUserRepository(h.server.DB)
-	userRepository.Find(&user, fmt.Sprintf("%d", claims.ID))
+	userRepository.Find(&user, claims.ID)
 
 	if user.ID == 0 {
 		return c.JSON(http.StatusNotFound, echo.Map{
@@ -127,7 +126,7 @@ func (h *AccountHandler) ResetPassword(c echo.Context) error {
 
 	user := model.User{}
 	userRepository := repository.NewUserRepository(h.server.DB)
-	userRepository.Find(&user, fmt.Sprintf("%d", claims.ID))
+	userRepository.Find(&user, claims.ID)
 
 	if user.ID == 0 {
 		return c.JSON(http.StatusNotFound, echo.Map{
