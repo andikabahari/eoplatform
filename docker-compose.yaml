@@ -1,0 +1,37 @@
+version: '3.9'
+services:
+  web:
+    container_name: eoplatform-web
+    build: .
+    restart: on-failure
+    depends_on:
+      - db
+    ports:
+      - '8080:8080'
+    env_file:
+      - .env
+    # environment:
+    #   APP_ENV: 'production'
+    #   HTTP_PORT: '8080'
+    #   AUTH_SECRET: 'sssssshhhh'
+    #   AUTH_COST: '10'
+    #   AUTH_EXP_HOURS: '1'
+    #   DB_DRIVER: 'mysql'
+    #   DB_USER: 'root'
+    #   DB_PASS: 'root'
+    #   DB_NAME: 'eoplatform'
+    #   DB_HOST: 'eoplatform-db'
+    #   DB_PORT: '3306'
+    #   SMTP_HOST: 'smtp.gmail.com'
+    #   SMTP_PORT: '587'
+    #   EMAIL_ADDRESS: 'email_or_username'
+    #   EMAIL_PASSWORD: 'password'
+  db:
+    container_name: eoplatform-db
+    image: mysql:latest
+    environment:
+      MYSQL_DATABASE: 'eoplatform'
+      MYSQL_PASSWORD: 'root'
+      MYSQL_ROOT_PASSWORD: 'root'
+    ports:
+      - '3306:3306'
