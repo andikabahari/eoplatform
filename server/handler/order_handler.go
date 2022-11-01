@@ -105,21 +105,22 @@ func (h *OrderHandler) AcceptOrCompleteOrder(c echo.Context) error {
 		})
 	}
 
-	message := ""
 	segment := strings.Split(c.Path(), "/")[4]
-	if segment == "accept" {
+	if segment == "accept" && !order.IsAccepted {
 		order.IsAccepted = true
-		message = "Your request has been accepted, please contact us as soon as possible."
+
+		var totalCost float64
+		for _, service := range order.Services {
+			totalCost += service.Cost
+		}
+
+		payment := model.Payment{}
+		payment.Amount = totalCost
+		payment.Status = "pending"
+		h.server.DB.Debug().Omit("Order").Save(&payment)
 	}
 	if segment == "complete" && order.IsAccepted {
 		order.IsCompleted = true
-		message = "Your order has been completed."
-	}
-
-	if message != "" {
-		if err := helper.SendEmail([]string{order.Email}, message); err != nil {
-			return err
-		}
 	}
 
 	h.server.DB.Debug().Omit(clause.Associations).Save(order)

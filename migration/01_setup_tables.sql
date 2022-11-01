@@ -59,6 +59,20 @@ CREATE TABLE `order_services` (
   CONSTRAINT `fk_order_services_service` FOREIGN KEY (`service_id`) REFERENCES `services` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
+CREATE TABLE `payments` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `created_at` datetime(3) DEFAULT NULL,
+  `updated_at` datetime(3) DEFAULT NULL,
+  `deleted_at` datetime(3) DEFAULT NULL,
+  `amount` double DEFAULT NULL,
+  `status` varchar(255),
+  `order_id` bigint unsigned DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_payments_deleted_at` (`deleted_at`),
+  KEY `fk_payments_order` (`order_id`),
+  CONSTRAINT `fk_payments_order` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
 CREATE TABLE `feedbacks` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `created_at` datetime(3) DEFAULT NULL,
@@ -79,8 +93,9 @@ CREATE TABLE `feedbacks` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- +goose Down
-DROP TABLE `feedbacks`;
-DROP TABLE `order_services`;
-DROP TABLE `orders`;
-DROP TABLE `services`;
-DROP TABLE `users`;
+DROP TABLE IF EXISTS `feedbacks`;
+DROP TABLE IF EXISTS `payments`;
+DROP TABLE IF EXISTS `order_services`;
+DROP TABLE IF EXISTS `orders`;
+DROP TABLE IF EXISTS `services`;
+DROP TABLE IF EXISTS `users`;
