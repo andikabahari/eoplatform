@@ -2,6 +2,7 @@ package handler
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 
@@ -156,11 +157,36 @@ func (h *OrderHandler) AcceptOrCompleteOrder(c echo.Context) error {
 }
 
 func (h *OrderHandler) PaymentStatus(c echo.Context) error {
-	// todo: handle payment status
-	var req any
-	c.Bind(&req)
-	fmt.Println("request:", req)
+	req := request.MidtransTransactionNotificationRequest{}
+
+	if err := c.Bind(&req); err != nil {
+		return err
+	}
+
+	payment := model.Payment{}
+	h.server.DB.Debug().Where("order_id = ?", req.OrderID).Find(&payment)
+
+	if payment.OrderID == 0 {
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"error": "order not found",
+		})
+	}
+
+	switch req.Status {
+	case "settlement":
+	case "capture":
+		payment.Status = "success"
+	case "deny":
+	case "cancel":
+	case "expire":
+		payment.Status = "fail"
+	}
+
+	h.server.DB.Debug().Omit("Order").Save(&payment)
+
+	log.Println("Midtrans request:", req)
+
 	return c.JSON(http.StatusOK, echo.Map{
-		"data": req,
+		"message": "order status updated",
 	})
 }
