@@ -44,6 +44,7 @@ func Setup(server *s.Server) {
 	v1.POST("/orders", orderHandler.CreateOrder, auth)
 	v1.POST("/orders/:id/accept", orderHandler.AcceptOrCompleteOrder, auth)
 	v1.POST("/orders/:id/complete", orderHandler.AcceptOrCompleteOrder, auth)
+	v1.POST("/MDDRlkYVFm9QOLK08MDp", orderHandler.PaymentStatus)
 
 	feedbackHandler := handler.NewFeedbackHandler(server)
 	v1.POST("/feedbacks", feedbackHandler.CreateFeedback, auth)
