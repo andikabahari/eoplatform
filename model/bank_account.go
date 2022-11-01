@@ -2,7 +2,7 @@ package model
 
 import "gorm.io/gorm"
 
-type BankAccounts struct {
+type BankAccount struct {
 	gorm.Model
 	Bank     string
 	VANumber string
