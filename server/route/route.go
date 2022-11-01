@@ -47,6 +47,7 @@ func Setup(server *s.Server) {
 	v1.POST("/MDDRlkYVFm9QOLK08MDp", orderHandler.PaymentStatus)
 
 	bankAccountHandler := handler.NewBankAccountHandler(server)
+	v1.GET("/bank-accounts", bankAccountHandler.GetBankAccounts, auth)
 	v1.POST("/bank-accounts", bankAccountHandler.CreateBankAccount, auth)
 
 	feedbackHandler := handler.NewFeedbackHandler(server)

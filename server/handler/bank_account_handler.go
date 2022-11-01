@@ -21,6 +21,25 @@ func NewBankAccountHandler(server *s.Server) *BankAccountHandler {
 	return &BankAccountHandler{server}
 }
 
+func (h *BankAccountHandler) GetBankAccounts(c echo.Context) error {
+	userToken := c.Get("user").(*jwt.Token)
+	claims := userToken.Claims.(*helper.JWTCustomClaims)
+
+	if claims.Role != "organizer" {
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"error": "unauthorized",
+		})
+	}
+
+	bankAccounts := make([]model.BankAccount, 0)
+	bankAccountRepository := repository.NewBankAccountRepository(h.server.DB)
+	bankAccountRepository.Get(&bankAccounts, claims.ID)
+
+	return c.JSON(http.StatusOK, echo.Map{
+		"data": response.NewBankAccountsResponse(bankAccounts),
+	})
+}
+
 func (h *BankAccountHandler) CreateBankAccount(c echo.Context) error {
 	userToken := c.Get("user").(*jwt.Token)
 	claims := userToken.Claims.(*helper.JWTCustomClaims)
