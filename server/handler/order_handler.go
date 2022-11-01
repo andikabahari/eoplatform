@@ -154,3 +154,13 @@ func (h *OrderHandler) AcceptOrCompleteOrder(c echo.Context) error {
 		"data": response.NewOrderResponse(order),
 	})
 }
+
+func (h *OrderHandler) PaymentStatus(c echo.Context) error {
+	// todo: handle payment status
+	var req any
+	c.Bind(&req)
+	fmt.Println("request:", req)
+	return c.JSON(http.StatusOK, echo.Map{
+		"data": req,
+	})
+}
