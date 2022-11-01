@@ -39,7 +39,7 @@ func (h *OrderHandler) GetOrders(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, echo.Map{
-		"data": response.NewCustomerOrdersResponse(orders),
+		"data": response.NewOrdersResponse(orders),
 	})
 }
 
@@ -144,6 +144,42 @@ func (h *OrderHandler) AcceptOrCompleteOrder(c echo.Context) error {
 		payment.Amount = totalCost
 		payment.Status = "pending"
 		h.server.DB.Debug().Omit("Order").Save(&payment)
+
+		bankAccount := model.BankAccount{}
+		h.server.DB.Debug().Where("user_id = ?", claims.ID).First(&bankAccount)
+
+		// midtransReq := request.MidtransCreateTransactionRequest{}
+		// midtransReq.PaymentType = "bank_transfer"
+		// midtransReq.TransactionDetails = request.MidtransTransactionDetails{
+		// 	OrderID:     strconv.FormatUint(uint64(order.ID), 10),
+		// 	GrossAmount: totalCost,
+		// }
+		// midtransReq.BankTransfer = request.MidtransBankTransfer{
+		// 	Bank:     bankAccount.Bank,
+		// 	VANumber: bankAccount.VANumber,
+		// }
+		// midtransReq.CustomerDetails = &request.MidtransCustomerDetails{
+		// 	Email:   order.Email,
+		// 	Address: order.Address,
+		// 	Phone:   order.Phone,
+		// }
+
+		helper.ChargeOrder(map[string]any{
+			"payment_type": "bank_transfer",
+			"transaction_details": map[string]any{
+				"order_id":     order.ID,
+				"gross_amount": totalCost,
+			},
+			"bank_transfer": map[string]any{
+				"bank":      bankAccount.Bank,
+				"va_number": bankAccount.VANumber,
+			},
+			"customer_details": map[string]any{
+				"phone":   order.Phone,
+				"email":   order.Email,
+				"address": order.Address,
+			},
+		})
 	}
 	if segment == "complete" && order.IsAccepted {
 		order.IsCompleted = true
