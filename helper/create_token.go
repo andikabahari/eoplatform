@@ -9,15 +9,15 @@ import (
 
 type JWTCustomClaims struct {
 	ID   uint   `json:"id"`
-	Name string `json:"name"`
+	Role string `json:"role"`
 	jwt.StandardClaims
 }
 
-func CreateToken(id uint, name string) (string, error) {
+func CreateToken(id uint, role string) (string, error) {
 	exp := time.Duration(config.LoadAuthConfig().ExpHours) * time.Hour
 	claims := JWTCustomClaims{
 		id,
-		name,
+		role,
 		jwt.StandardClaims{
 			ExpiresAt: time.Now().Add(exp).Unix(),
 		},

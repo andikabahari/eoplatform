@@ -42,6 +42,7 @@ func (h *RegisterHandler) Register(c echo.Context) error {
 	user.Name = req.Name
 	user.Username = req.Username
 	user.Password = string(hashedPassword)
+	user.Role = req.Role
 
 	userRepository := repository.NewUserRepository(h.server.DB)
 	userRepository.Create(&user)

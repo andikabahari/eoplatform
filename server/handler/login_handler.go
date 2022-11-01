@@ -44,7 +44,7 @@ func (h *LoginHandler) Login(c echo.Context) error {
 		})
 	}
 
-	token, err := helper.CreateToken(user.ID, user.Name)
+	token, err := helper.CreateToken(user.ID, user.Role)
 	if err != nil {
 		return err
 	}

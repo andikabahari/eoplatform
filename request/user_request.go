@@ -1,6 +1,8 @@
 package request
 
 import (
+	"regexp"
+
 	validation "github.com/go-ozzo/ozzo-validation"
 )
 
@@ -13,6 +15,7 @@ type CreateUserRequest struct {
 	Name     string `json:"name"`
 	Username string `json:"username"`
 	Password string `json:"password"`
+	Role     string `json:"role"`
 }
 
 func (r CreateUserRequest) Validate() error {
@@ -20,6 +23,7 @@ func (r CreateUserRequest) Validate() error {
 		validation.Field(&r.Name, validation.Required),
 		validation.Field(&r.Username, validation.Required),
 		validation.Field(&r.Password, validation.Required, validation.Length(8, 0)),
+		validation.Field(&r.Role, validation.Match(regexp.MustCompile("^(organizer|customer)$"))),
 	)
 }
 

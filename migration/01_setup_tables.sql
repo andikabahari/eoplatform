@@ -7,8 +7,7 @@ CREATE TABLE `users` (
   `name` varchar(255),
   `username` varchar(255),
   `password` varchar(255),
-  `email` varchar(255),
-  `address` text,
+  `role` varchar(255),
   PRIMARY KEY (`id`),
   UNIQUE KEY `idx_users_username` (`username`),
   KEY `idx_users_deleted_at` (`deleted_at`)
