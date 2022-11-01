@@ -42,6 +42,7 @@ CREATE TABLE `orders` (
   `phone` varchar(255),
   `email` varchar(255),
   `address` text,
+  `note` text,
   `user_id` bigint unsigned DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `idx_orders_deleted_at` (`deleted_at`),

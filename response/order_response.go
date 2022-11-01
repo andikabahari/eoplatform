@@ -15,6 +15,7 @@ type OrderResponse struct {
 	Phone       string             `json:"phone"`
 	Email       string             `json:"email"`
 	Address     string             `json:"address"`
+	Note        string             `json:"note"`
 	User        *UserResponse      `json:"user,omitempty"`
 	Services    *[]ServiceResponse `json:"services,omitempty"`
 }
@@ -28,6 +29,7 @@ func NewOrderResponse(order model.Order) *OrderResponse {
 	res.Phone = order.Phone
 	res.Email = order.Email
 	res.Address = order.Address
+	res.Note = order.Note
 	res.User = NewUserResponse(order.User)
 
 	services := make([]ServiceResponse, 0)
@@ -59,6 +61,7 @@ func NewMyOrdersResponse(orders []model.Order) *[]OrderResponse {
 		tmp.Phone = order.Phone
 		tmp.Email = order.Email
 		tmp.Address = order.Address
+		tmp.Note = order.Note
 		tmp.User = nil
 		res = append(res, tmp)
 
@@ -95,6 +98,7 @@ func NewCustomerOrdersResponse(orders []model.Order) *[]OrderResponse {
 		tmp.Phone = order.Phone
 		tmp.Email = order.Email
 		tmp.Address = order.Address
+		tmp.Note = order.Note
 		tmp.User = NewUserResponse(order.User)
 		res = append(res, tmp)
 

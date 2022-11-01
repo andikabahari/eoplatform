@@ -71,6 +71,7 @@ func (h *OrderHandler) CreateOrder(c echo.Context) error {
 	order.Phone = req.Phone
 	order.Email = req.Email
 	order.Address = req.Address
+	order.Note = req.Note
 	order.UserID = claims.ID
 	order.Services = services
 
