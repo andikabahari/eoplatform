@@ -13,6 +13,20 @@ CREATE TABLE `users` (
   KEY `idx_users_deleted_at` (`deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
+CREATE TABLE `bank_accounts` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `created_at` datetime(3) DEFAULT NULL,
+  `updated_at` datetime(3) DEFAULT NULL,
+  `deleted_at` datetime(3) DEFAULT NULL,
+  `bank` varchar(255),
+  `va_number` varchar(255),
+  `user_id` bigint unsigned DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_bank_accounts_deleted_at` (`deleted_at`),
+  KEY `fk_bank_accounts_user` (`user_id`),
+  CONSTRAINT `fk_bank_accounts_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
 CREATE TABLE `services` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `created_at` datetime(3) DEFAULT NULL,
@@ -97,4 +111,5 @@ DROP TABLE IF EXISTS `payments`;
 DROP TABLE IF EXISTS `order_services`;
 DROP TABLE IF EXISTS `orders`;
 DROP TABLE IF EXISTS `services`;
+DROP TABLE IF EXISTS `bank_accounts`;
 DROP TABLE IF EXISTS `users`;
