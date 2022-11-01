@@ -41,6 +41,8 @@ func NewOrderResponse(order model.Order) *OrderResponse {
 		tmp.Name = service.Name
 		tmp.Description = service.Description
 		tmp.Cost = service.Cost
+		tmp.Phone = service.Phone
+		tmp.Email = service.Email
 		tmp.User = nil
 		services = append(services, tmp)
 	}
@@ -76,6 +78,8 @@ func NewMyOrdersResponse(orders []model.Order) *[]OrderResponse {
 			tmp.Name = service.Name
 			tmp.Description = service.Description
 			tmp.Cost = service.Cost
+			tmp.Phone = service.Phone
+			tmp.Email = service.Email
 			tmp.User = nil
 			services = append(services, tmp)
 		}
@@ -111,6 +115,8 @@ func NewCustomerOrdersResponse(orders []model.Order) *[]OrderResponse {
 			tmp.Name = service.Name
 			tmp.Description = service.Description
 			tmp.Cost = service.Cost
+			tmp.Phone = service.Phone
+			tmp.Email = service.Email
 			tmp.User = nil
 			services = append(services, tmp)
 		}
