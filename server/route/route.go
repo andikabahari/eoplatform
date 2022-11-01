@@ -31,8 +31,6 @@ func Setup(server *s.Server) {
 	v1.GET("/account", accountHandler.GetAccount, auth)
 	v1.PUT("/account", accountHandler.UpdateAccount, auth)
 	v1.PUT("/account/password", accountHandler.ResetPassword, auth)
-	v1.GET("/account/my-orders", accountHandler.GetMyOrders, auth)
-	v1.GET("/account/customer-orders", accountHandler.GetCustomerOrders, auth)
 
 	serviceHandler := handler.NewServiceHandler(server)
 	v1.GET("/services", serviceHandler.GetServices)
@@ -42,9 +40,10 @@ func Setup(server *s.Server) {
 	v1.DELETE("/services/:id", serviceHandler.DeleteService, auth)
 
 	orderHandler := handler.NewOrderHandler(server)
+	v1.GET("/orders", orderHandler.GetOrders, auth)
 	v1.POST("/orders", orderHandler.CreateOrder, auth)
-	v1.GET("/orders/:id/accept", orderHandler.AcceptOrCompleteOrder, auth)
-	v1.GET("/orders/:id/complete", orderHandler.AcceptOrCompleteOrder, auth)
+	v1.POST("/orders/:id/accept", orderHandler.AcceptOrCompleteOrder, auth)
+	v1.POST("/orders/:id/complete", orderHandler.AcceptOrCompleteOrder, auth)
 
 	feedbackHandler := handler.NewFeedbackHandler(server)
 	v1.POST("/feedbacks", feedbackHandler.CreateFeedback, auth)

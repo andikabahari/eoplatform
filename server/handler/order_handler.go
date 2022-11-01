@@ -24,7 +24,34 @@ func NewOrderHandler(server *s.Server) *OrderHandler {
 	return &OrderHandler{server}
 }
 
+func (h *OrderHandler) GetOrders(c echo.Context) error {
+	userToken := c.Get("user").(*jwt.Token)
+	claims := userToken.Claims.(*helper.JWTCustomClaims)
+
+	orders := make([]model.Order, 0)
+	orderRepository := repository.NewOrderRepository(h.server.DB)
+	if claims.Role == "customer" {
+		orderRepository.GetOrdersForCustomer(&orders, claims.ID)
+	}
+	if claims.Role == "organizer" {
+		orderRepository.GetOrdersForOrganizer(&orders, claims.ID)
+	}
+
+	return c.JSON(http.StatusOK, echo.Map{
+		"data": response.NewCustomerOrdersResponse(orders),
+	})
+}
+
 func (h *OrderHandler) CreateOrder(c echo.Context) error {
+	userToken := c.Get("user").(*jwt.Token)
+	claims := userToken.Claims.(*helper.JWTCustomClaims)
+
+	if claims.Role != "customer" {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "unauthorized",
+		})
+	}
+
 	req := request.CreateOrderRequest{}
 
 	if err := c.Bind(&req); err != nil {
@@ -57,9 +84,6 @@ func (h *OrderHandler) CreateOrder(c echo.Context) error {
 
 		services = append(services, service)
 	}
-
-	userToken := c.Get("user").(*jwt.Token)
-	claims := userToken.Claims.(*helper.JWTCustomClaims)
 
 	user := model.User{}
 	userRepository := repository.NewUserRepository(h.server.DB)
@@ -99,7 +123,7 @@ func (h *OrderHandler) AcceptOrCompleteOrder(c echo.Context) error {
 	userToken := c.Get("user").(*jwt.Token)
 	claims := userToken.Claims.(*helper.JWTCustomClaims)
 
-	if order.UserID != claims.ID {
+	if order.Services[0].UserID != claims.ID {
 		return c.JSON(http.StatusUnauthorized, echo.Map{
 			"error": "unauthorized",
 		})
@@ -115,6 +139,7 @@ func (h *OrderHandler) AcceptOrCompleteOrder(c echo.Context) error {
 		}
 
 		payment := model.Payment{}
+		payment.OrderID = order.ID
 		payment.Amount = totalCost
 		payment.Status = "pending"
 		h.server.DB.Debug().Omit("Order").Save(&payment)
