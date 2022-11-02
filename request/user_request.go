@@ -29,14 +29,12 @@ func (r CreateUserRequest) Validate() error {
 }
 
 type UpdateUserRequest struct {
-	Name     string `json:"name"`
-	Username string `json:"username"`
+	Name string `json:"name"`
 }
 
 func (r UpdateUserRequest) Validate() error {
 	return validation.ValidateStruct(&r,
 		validation.Field(&r.Name, validation.Required, validation.Length(1, 100)),
-		validation.Field(&r.Username, validation.Required, validation.Length(4, 30), is.Alphanumeric),
 	)
 }
 
