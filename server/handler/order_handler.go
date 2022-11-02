@@ -148,22 +148,6 @@ func (h *OrderHandler) AcceptOrCompleteOrder(c echo.Context) error {
 		bankAccount := model.BankAccount{}
 		h.server.DB.Debug().Where("user_id = ?", claims.ID).First(&bankAccount)
 
-		// midtransReq := request.MidtransCreateTransactionRequest{}
-		// midtransReq.PaymentType = "bank_transfer"
-		// midtransReq.TransactionDetails = request.MidtransTransactionDetails{
-		// 	OrderID:     strconv.FormatUint(uint64(order.ID), 10),
-		// 	GrossAmount: totalCost,
-		// }
-		// midtransReq.BankTransfer = request.MidtransBankTransfer{
-		// 	Bank:     bankAccount.Bank,
-		// 	VANumber: bankAccount.VANumber,
-		// }
-		// midtransReq.CustomerDetails = &request.MidtransCustomerDetails{
-		// 	Email:   order.Email,
-		// 	Address: order.Address,
-		// 	Phone:   order.Phone,
-		// }
-
 		helper.ChargeOrder(map[string]any{
 			"payment_type": "bank_transfer",
 			"transaction_details": map[string]any{
