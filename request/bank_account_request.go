@@ -1,6 +1,10 @@
 package request
 
-import validation "github.com/go-ozzo/ozzo-validation"
+import (
+	"regexp"
+
+	validation "github.com/go-ozzo/ozzo-validation"
+)
 
 type BasicBankAccount struct {
 	Bank     string `json:"bank"`
@@ -9,8 +13,8 @@ type BasicBankAccount struct {
 
 func (b BasicBankAccount) Validate() error {
 	return validation.ValidateStruct(&b,
-		validation.Field(&b.Bank, validation.Required),
-		validation.Field(&b.VANumber, validation.Required),
+		validation.Field(&b.Bank, validation.Required, validation.Match(regexp.MustCompile("^(bni|bri|bca)$"))),
+		validation.Field(&b.VANumber, validation.Required, validation.Length(1, 50)),
 	)
 }
 
