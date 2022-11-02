@@ -39,7 +39,8 @@ func (h *OrderHandler) GetOrders(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, echo.Map{
-		"data": response.NewOrdersResponse(orders),
+		"message": "fetch orders successful",
+		"data":    response.NewOrdersResponse(orders),
 	})
 }
 
@@ -49,7 +50,8 @@ func (h *OrderHandler) CreateOrder(c echo.Context) error {
 
 	if claims.Role != "customer" {
 		return c.JSON(http.StatusBadRequest, echo.Map{
-			"error": "unauthorized",
+			"message": "create order failure",
+			"error":   "unauthorized",
 		})
 	}
 
@@ -61,7 +63,8 @@ func (h *OrderHandler) CreateOrder(c echo.Context) error {
 
 	if err := req.Validate(); err != nil {
 		return c.JSON(http.StatusBadRequest, echo.Map{
-			"error": err,
+			"message": "validation error",
+			"error":   err,
 		})
 	}
 
@@ -79,7 +82,7 @@ func (h *OrderHandler) CreateOrder(c echo.Context) error {
 
 		if service.ID == 0 || service.UserID != first.UserID {
 			return c.JSON(http.StatusBadRequest, echo.Map{
-				"error": "cannot proceed your order",
+				"message": "cannot proceed your order",
 			})
 		}
 
@@ -106,7 +109,8 @@ func (h *OrderHandler) CreateOrder(c echo.Context) error {
 	order.User = user
 
 	return c.JSON(http.StatusOK, echo.Map{
-		"data": response.NewOrderResponse(order),
+		"message": "create order successful",
+		"data":    response.NewOrderResponse(order),
 	})
 }
 
@@ -117,7 +121,8 @@ func (h *OrderHandler) AcceptOrCompleteOrder(c echo.Context) error {
 
 	if order.ID == 0 {
 		return c.JSON(http.StatusNotFound, echo.Map{
-			"error": "order not found",
+			"message": "accept or complete order failure",
+			"error":   "order not found",
 		})
 	}
 
@@ -126,7 +131,8 @@ func (h *OrderHandler) AcceptOrCompleteOrder(c echo.Context) error {
 
 	if order.Services[0].UserID != claims.ID {
 		return c.JSON(http.StatusUnauthorized, echo.Map{
-			"error": "unauthorized",
+			"message": "accept or complete order failure",
+			"error":   "unauthorized",
 		})
 	}
 
@@ -172,7 +178,42 @@ func (h *OrderHandler) AcceptOrCompleteOrder(c echo.Context) error {
 	h.server.DB.Debug().Omit(clause.Associations).Save(order)
 
 	return c.JSON(http.StatusOK, echo.Map{
-		"data": response.NewOrderResponse(order),
+		"message": "accept or complete order successful",
+		"data":    response.NewOrderResponse(order),
+	})
+}
+
+func (h *OrderHandler) CancelOrder(c echo.Context) error {
+	order := model.Order{}
+	orderRepository := repository.NewOrderRepository(h.server.DB)
+	orderRepository.Find(&order, c.Param("id"))
+
+	if order.ID == 0 {
+		return c.JSON(http.StatusNotFound, echo.Map{
+			"message": "cancel order failure",
+			"error":   "order not found",
+		})
+	}
+
+	userToken := c.Get("user").(*jwt.Token)
+	claims := userToken.Claims.(*helper.JWTCustomClaims)
+
+	if order.UserID != claims.ID || claims.Role != "organizer" {
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"message": "cancel service failure",
+			"error":   "unauthorized",
+		})
+	}
+
+	orderRepository.Delete(&order)
+
+	return c.JSON(http.StatusOK, echo.Map{
+		"message": "cancel order successful",
+		"data": echo.Map{
+			"kind":    "order",
+			"id":      c.Param("id"),
+			"deleted": true,
+		},
 	})
 }
 
@@ -185,11 +226,13 @@ func (h *OrderHandler) PaymentStatus(c echo.Context) error {
 	log.Println("Midtrans request:", req)
 
 	payment := model.Payment{}
-	h.server.DB.Debug().Where("order_id = ?", req.OrderID).Find(&payment)
+	paymentRepository := repository.NewPaymentRepository(h.server.DB)
+	paymentRepository.FindOnlyByOrderID(&payment, req.OrderID)
 
 	if payment.OrderID == 0 {
-		return c.JSON(http.StatusUnauthorized, echo.Map{
-			"error": "order not found",
+		return c.JSON(http.StatusNotFound, echo.Map{
+			"message": "payment failure",
+			"error":   "order not found",
 		})
 	}
 
@@ -197,15 +240,18 @@ func (h *OrderHandler) PaymentStatus(c echo.Context) error {
 	case "settlement":
 	case "capture":
 		payment.Status = "success"
+		paymentRepository.Create(&payment)
 	case "deny":
 	case "cancel":
 	case "expire":
 		payment.Status = "fail"
+		order := model.Order{}
+		orderRepository := repository.NewOrderRepository(h.server.DB)
+		orderRepository.FindOnly(&order, req.OrderID)
+		orderRepository.Delete(&order)
 	}
 
-	h.server.DB.Debug().Omit("Order").Save(&payment)
-
 	return c.JSON(http.StatusOK, echo.Map{
-		"message": "order status updated",
+		"message": "payment successful",
 	})
 }

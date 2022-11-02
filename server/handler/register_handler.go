@@ -29,7 +29,8 @@ func (h *RegisterHandler) Register(c echo.Context) error {
 
 	if err := req.Validate(); err != nil {
 		return c.JSON(http.StatusBadRequest, echo.Map{
-			"error": err,
+			"message": "validation error",
+			"error":   err,
 		})
 	}
 
@@ -38,16 +39,27 @@ func (h *RegisterHandler) Register(c echo.Context) error {
 		return err
 	}
 
+	userRepository := repository.NewUserRepository(h.server.DB)
+
+	existingUser := model.User{}
+	userRepository.FindByUsername(&existingUser, req.Username)
+	if existingUser.ID > 0 {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"message": "registration failure",
+			"error":   "user with the same username already exists",
+		})
+	}
+
 	user := model.User{}
 	user.Name = req.Name
 	user.Username = req.Username
 	user.Password = string(hashedPassword)
 	user.Role = req.Role
 
-	userRepository := repository.NewUserRepository(h.server.DB)
 	userRepository.Create(&user)
 
 	return c.JSON(http.StatusOK, echo.Map{
-		"data": response.NewUserResponse(user),
+		"message": "registration successful",
+		"data":    response.NewUserResponse(user),
 	})
 }

@@ -36,7 +36,6 @@ func (r *userRepository) Create(user *model.User) {
 
 func (r *userRepository) Update(user *model.User, req *request.UpdateUserRequest) {
 	user.Name = req.Name
-	user.Username = req.Username
 
 	r.db.Debug().Save(user)
 }

@@ -34,13 +34,15 @@ func (h *LoginHandler) Login(c echo.Context) error {
 
 	if user.ID == 0 {
 		return c.JSON(http.StatusNotFound, echo.Map{
-			"error": "user not found",
+			"message": "login failure",
+			"error":   "user not found",
 		})
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
 		return c.JSON(http.StatusNotFound, echo.Map{
-			"error": "invalid password",
+			"message": "login failure",
+			"error":   "invalid password",
 		})
 	}
 
@@ -50,6 +52,7 @@ func (h *LoginHandler) Login(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, echo.Map{
-		"data": token,
+		"message": "login successful",
+		"data":    token,
 	})
 }

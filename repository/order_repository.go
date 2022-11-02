@@ -65,3 +65,11 @@ func (r *orderRepository) Create(order *model.Order) {
 func (r *orderRepository) Find(order *model.Order, id string) {
 	r.db.Debug().Preload("User").Preload("Services").Where("id = ?", id).Find(order)
 }
+
+func (r *orderRepository) FindOnly(order *model.Order, id any) {
+	r.db.Debug().Where("id = ?", id).Find(order)
+}
+
+func (r *orderRepository) Delete(order *model.Order) {
+	r.db.Debug().Delete(order)
+}
