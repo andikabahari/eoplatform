@@ -176,6 +176,40 @@ func (h *OrderHandler) AcceptOrCompleteOrder(c echo.Context) error {
 	})
 }
 
+func (h *OrderHandler) CancelOrder(c echo.Context) error {
+	order := model.Order{}
+	orderRepository := repository.NewOrderRepository(h.server.DB)
+	orderRepository.Find(&order, c.Param("id"))
+
+	if order.ID == 0 {
+		return c.JSON(http.StatusNotFound, echo.Map{
+			"message": "cancel order failure",
+			"error":   "order not found",
+		})
+	}
+
+	userToken := c.Get("user").(*jwt.Token)
+	claims := userToken.Claims.(*helper.JWTCustomClaims)
+
+	if order.UserID != claims.ID || claims.Role != "organizer" {
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"message": "cancel service failure",
+			"error":   "unauthorized",
+		})
+	}
+
+	orderRepository.Delete(&order)
+
+	return c.JSON(http.StatusOK, echo.Map{
+		"message": "cancel order successful",
+		"data": echo.Map{
+			"kind":    "order",
+			"id":      c.Param("id"),
+			"deleted": true,
+		},
+	})
+}
+
 func (h *OrderHandler) PaymentStatus(c echo.Context) error {
 	req := request.MidtransTransactionNotificationRequest{}
 
