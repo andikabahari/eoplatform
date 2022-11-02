@@ -4,6 +4,7 @@ import (
 	"regexp"
 
 	validation "github.com/go-ozzo/ozzo-validation"
+	"github.com/go-ozzo/ozzo-validation/is"
 )
 
 type LoginRequest struct {
@@ -20,9 +21,9 @@ type CreateUserRequest struct {
 
 func (r CreateUserRequest) Validate() error {
 	return validation.ValidateStruct(&r,
-		validation.Field(&r.Name, validation.Required),
-		validation.Field(&r.Username, validation.Required),
-		validation.Field(&r.Password, validation.Required, validation.Length(8, 0)),
+		validation.Field(&r.Name, validation.Required, validation.Length(1, 100)),
+		validation.Field(&r.Username, validation.Required, validation.Length(4, 30), is.Alphanumeric),
+		validation.Field(&r.Password, validation.Required, validation.Length(8, 100)),
 		validation.Field(&r.Role, validation.Match(regexp.MustCompile("^(organizer|customer)$"))),
 	)
 }
@@ -34,8 +35,8 @@ type UpdateUserRequest struct {
 
 func (r UpdateUserRequest) Validate() error {
 	return validation.ValidateStruct(&r,
-		validation.Field(&r.Name, validation.Required),
-		validation.Field(&r.Username, validation.Required),
+		validation.Field(&r.Name, validation.Required, validation.Length(1, 100)),
+		validation.Field(&r.Username, validation.Required, validation.Length(4, 30), is.Alphanumeric),
 	)
 }
 
@@ -47,7 +48,7 @@ type UpdateUserPasswordRequest struct {
 
 func (r UpdateUserPasswordRequest) Validate() error {
 	return validation.ValidateStruct(&r,
-		validation.Field(&r.Password, validation.Required, validation.Length(8, 0)),
+		validation.Field(&r.Password, validation.Required, validation.Length(8, 100)),
 		validation.Field(&r.OldPassword, validation.Required),
 	)
 }
