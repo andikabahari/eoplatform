@@ -50,7 +50,8 @@ func (h *AccountHandler) UpdateAccount(c echo.Context) error {
 
 	if err := req.Validate(); err != nil {
 		return c.JSON(http.StatusBadRequest, echo.Map{
-			"error": err,
+			"message": "validation error",
+			"error":   err,
 		})
 	}
 
@@ -63,14 +64,16 @@ func (h *AccountHandler) UpdateAccount(c echo.Context) error {
 
 	if user.ID == 0 {
 		return c.JSON(http.StatusNotFound, echo.Map{
-			"error": "user not found",
+			"message": "update account failure",
+			"error":   "user not found",
 		})
 	}
 
 	userRepository.Update(&user, &req)
 
 	return c.JSON(http.StatusOK, echo.Map{
-		"data": response.NewUserResponse(user),
+		"message": "update account successful",
+		"data":    response.NewUserResponse(user),
 	})
 }
 
@@ -83,12 +86,14 @@ func (h *AccountHandler) ResetPassword(c echo.Context) error {
 
 	if err := req.Validate(); err != nil {
 		return c.JSON(http.StatusBadRequest, echo.Map{
-			"error": err,
+			"message": "validation error",
+			"error":   err,
 		})
 	}
 
 	if req.Password != req.ConfirmPassword {
 		return c.JSON(http.StatusBadRequest, echo.Map{
+			"message": "validation error",
 			"error": echo.Map{
 				"confirm_password": "must match \"password\"",
 			},
@@ -104,13 +109,15 @@ func (h *AccountHandler) ResetPassword(c echo.Context) error {
 
 	if user.ID == 0 {
 		return c.JSON(http.StatusNotFound, echo.Map{
-			"error": "user not found",
+			"message": "reset password failure",
+			"error":   "user not found",
 		})
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.OldPassword)); err != nil {
 		return c.JSON(http.StatusUnauthorized, echo.Map{
-			"error": "unauthorized",
+			"message": "reset password failure",
+			"error":   "unauthorized",
 		})
 	}
 
@@ -122,6 +129,7 @@ func (h *AccountHandler) ResetPassword(c echo.Context) error {
 	userRepository.ResetPassword(&user, string(hashedPassword))
 
 	return c.JSON(http.StatusOK, echo.Map{
+		"message": "reset password successful",
 		"data": echo.Map{
 			"kind":    "user",
 			"id":      user.ID,
