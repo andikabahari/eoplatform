@@ -10,8 +10,8 @@ type CreateFeedbackRequest struct {
 
 func (r CreateFeedbackRequest) Validate() error {
 	return validation.ValidateStruct(&r,
-		validation.Field(&r.Description, validation.Required),
-		validation.Field(&r.Rating, validation.Required),
+		validation.Field(&r.Description, validation.Required, validation.Length(1, 250)),
+		validation.Field(&r.Rating, validation.Required, validation.Min(0), validation.Max(5)),
 		validation.Field(&r.ToUserID, validation.Required),
 	)
 }
