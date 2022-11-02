@@ -178,6 +178,7 @@ func (h *OrderHandler) AcceptOrCompleteOrder(c echo.Context) error {
 
 func (h *OrderHandler) PaymentStatus(c echo.Context) error {
 	req := request.MidtransTransactionNotificationRequest{}
+	log.Println("Midtrans request:", req)
 
 	if err := c.Bind(&req); err != nil {
 		return err
@@ -203,8 +204,6 @@ func (h *OrderHandler) PaymentStatus(c echo.Context) error {
 	}
 
 	h.server.DB.Debug().Omit("Order").Save(&payment)
-
-	log.Println("Midtrans request:", req)
 
 	return c.JSON(http.StatusOK, echo.Map{
 		"message": "order status updated",
