@@ -49,9 +49,9 @@ func Setup(server *s.Server) {
 	bankAccountHandler := handler.NewBankAccountHandler(server)
 	v1.GET("/bank-accounts", bankAccountHandler.GetBankAccounts, auth)
 	v1.POST("/bank-accounts", bankAccountHandler.CreateBankAccount, auth)
-	v1.DELETE("/bank-accounts/:id", bankAccountHandler.DeleteBankAccount, auth)
+	v1.PUT("/bank-accounts", bankAccountHandler.UpdateBankAccount, auth)
 
 	feedbackHandler := handler.NewFeedbackHandler(server)
-	v1.GET("/feedbacks", feedbackHandler.GetFeedbacks, auth)
+	v1.GET("/feedbacks", feedbackHandler.GetFeedbacks)
 	v1.POST("/feedbacks", feedbackHandler.CreateFeedback, auth)
 }

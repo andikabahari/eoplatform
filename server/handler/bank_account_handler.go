@@ -76,6 +76,39 @@ func (h *BankAccountHandler) CreateBankAccount(c echo.Context) error {
 	})
 }
 
+func (h *BankAccountHandler) UpdateBankAccount(c echo.Context) error {
+	req := request.UpdateBankAccountRequest{}
+
+	if err := c.Bind(&req); err != nil {
+		return err
+	}
+
+	if err := req.Validate(); err != nil {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": err,
+		})
+	}
+
+	userToken := c.Get("user").(*jwt.Token)
+	claims := userToken.Claims.(*helper.JWTCustomClaims)
+
+	bankAccount := model.BankAccount{}
+	bankAccountRepository := repository.NewBankAccountRepository(h.server.DB)
+	bankAccountRepository.FindByUserID(&bankAccount, claims.ID)
+
+	if bankAccount.ID == 0 {
+		return c.JSON(http.StatusNotFound, echo.Map{
+			"error": "bank account not found",
+		})
+	}
+
+	bankAccountRepository.Update(&bankAccount, &req)
+
+	return c.JSON(http.StatusOK, echo.Map{
+		"data": response.NewBankAccountResponse(bankAccount),
+	})
+}
+
 func (h *BankAccountHandler) DeleteBankAccount(c echo.Context) error {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
