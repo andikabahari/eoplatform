@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"database/sql"
 	"net/http"
 
 	"github.com/andikabahari/eoplatform/helper"
@@ -56,9 +57,38 @@ func (h *FeedbackHandler) CreateFeedback(c echo.Context) error {
 		})
 	}
 
+	var query string
+
+	feedbacksCount := 0
+	query = "SELECT COUNT(1) FROM feedbacks " +
+		"WHERE from_user_id=@FromUserID AND to_user_id=@ToUserID"
+	h.server.DB.Debug().Raw(query,
+		sql.Named("FromUserID", claims.ID),
+		sql.Named("ToUserID", req.ToUserID),
+	).Scan(&feedbacksCount)
+
+	ordersCount := 0
+	query = "SELECT COUNT(1) FROM(" +
+		"SELECT DISTINCT o.id FROM orders o " +
+		"JOIN order_services os ON os.order_id=o.id " +
+		"JOIN services s ON s.id=os.service_id " +
+		"WHERE o.user_id=@FromUserID AND s.user_id=@ToUserID AND is_completed>0" +
+		") AS t"
+	h.server.DB.Debug().Raw(query,
+		sql.Named("FromUserID", claims.ID),
+		sql.Named("ToUserID", req.ToUserID),
+	).Scan(&ordersCount)
+
+	if feedbacksCount >= ordersCount {
+		return c.JSON(http.StatusForbidden, echo.Map{
+			"message": "create feedback failure",
+			"error":   "forbidden",
+		})
+	}
+
 	feedback := model.Feedback{}
 	feedback.Description = req.Description
-	feedback.Rating = req.Rating
+	feedback.Rating = uint(req.Rating)
 	feedback.FromUserID = claims.ID
 	feedback.ToUserID = req.ToUserID
 
