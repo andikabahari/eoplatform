@@ -27,7 +27,8 @@ func (h *FeedbackHandler) GetFeedbacks(c echo.Context) error {
 	feedbackpository.Get(&feedbacks, c.QueryParam("to_user_id"))
 
 	return c.JSON(http.StatusOK, echo.Map{
-		"data": response.NewFeedbacksResponse(feedbacks),
+		"message": "fetch feedbacks successful",
+		"data":    response.NewFeedbacksResponse(feedbacks),
 	})
 }
 
@@ -37,7 +38,8 @@ func (h *FeedbackHandler) CreateFeedback(c echo.Context) error {
 
 	if claims.Role != "customer" {
 		return c.JSON(http.StatusUnauthorized, echo.Map{
-			"error": "unauthorized",
+			"message": "create feedback failure",
+			"error":   "unauthorized",
 		})
 	}
 
@@ -49,7 +51,8 @@ func (h *FeedbackHandler) CreateFeedback(c echo.Context) error {
 
 	if err := req.Validate(); err != nil {
 		return c.JSON(http.StatusBadRequest, echo.Map{
-			"error": err,
+			"message": "validation error",
+			"error":   err,
 		})
 	}
 
@@ -78,6 +81,7 @@ func (h *FeedbackHandler) CreateFeedback(c echo.Context) error {
 	userRepository.Find(&feedback.ToUser, req.ToUserID)
 
 	return c.JSON(http.StatusOK, echo.Map{
-		"data": response.NewFeedbackResponse(feedback),
+		"message": "create feedback successful",
+		"data":    response.NewFeedbackResponse(feedback),
 	})
 }
