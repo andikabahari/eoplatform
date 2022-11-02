@@ -32,12 +32,14 @@ func (h *AccountHandler) GetAccount(c echo.Context) error {
 
 	if user.ID == 0 {
 		return c.JSON(http.StatusNotFound, echo.Map{
-			"error": "user not found",
+			"message": "fetch account failure",
+			"error":   "user not found",
 		})
 	}
 
 	return c.JSON(http.StatusOK, echo.Map{
-		"data": response.NewUserResponse(user),
+		"message": "fetch account successful",
+		"data":    response.NewUserResponse(user),
 	})
 }
 
