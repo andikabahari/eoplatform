@@ -22,7 +22,9 @@ func NewServiceResponse(service model.Service) *ServiceResponse {
 	res.Email = service.Email
 	res.IsPublished = service.IsPublished
 	res.Description = service.Description
-	res.User = NewUserResponse(service.User)
+	if service.User.ID > 0 {
+		res.User = NewUserResponse(service.User)
+	}
 
 	return &res
 }

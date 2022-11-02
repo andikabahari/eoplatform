@@ -31,8 +31,6 @@ func Setup(server *s.Server) {
 	v1.GET("/account", accountHandler.GetAccount, auth)
 	v1.PUT("/account", accountHandler.UpdateAccount, auth)
 	v1.PUT("/account/password", accountHandler.ResetPassword, auth)
-	v1.GET("/account/my-orders", accountHandler.GetMyOrders, auth)
-	v1.GET("/account/customer-orders", accountHandler.GetCustomerOrders, auth)
 
 	serviceHandler := handler.NewServiceHandler(server)
 	v1.GET("/services", serviceHandler.GetServices)
@@ -42,10 +40,19 @@ func Setup(server *s.Server) {
 	v1.DELETE("/services/:id", serviceHandler.DeleteService, auth)
 
 	orderHandler := handler.NewOrderHandler(server)
+	v1.GET("/orders", orderHandler.GetOrders, auth)
 	v1.POST("/orders", orderHandler.CreateOrder, auth)
-	v1.GET("/orders/:id/accept", orderHandler.AcceptOrCompleteOrder, auth)
-	v1.GET("/orders/:id/complete", orderHandler.AcceptOrCompleteOrder, auth)
+	v1.POST("/orders/:id/accept", orderHandler.AcceptOrCompleteOrder, auth)
+	v1.POST("/orders/:id/complete", orderHandler.AcceptOrCompleteOrder, auth)
+	v1.POST("/orders/:id/cancel", orderHandler.CancelOrder, auth)
+	v1.POST("/MDDRlkYVFm9QOLK08MDp", orderHandler.PaymentStatus)
+
+	bankAccountHandler := handler.NewBankAccountHandler(server)
+	v1.GET("/bank-accounts", bankAccountHandler.GetBankAccounts, auth)
+	v1.POST("/bank-accounts", bankAccountHandler.CreateBankAccount, auth)
+	v1.PUT("/bank-accounts", bankAccountHandler.UpdateBankAccount, auth)
 
 	feedbackHandler := handler.NewFeedbackHandler(server)
+	v1.GET("/feedbacks", feedbackHandler.GetFeedbacks)
 	v1.POST("/feedbacks", feedbackHandler.CreateFeedback, auth)
 }

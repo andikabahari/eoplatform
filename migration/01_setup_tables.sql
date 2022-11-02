@@ -7,11 +7,24 @@ CREATE TABLE `users` (
   `name` varchar(255),
   `username` varchar(255),
   `password` varchar(255),
-  `email` varchar(255),
-  `address` text,
+  `role` varchar(255),
   PRIMARY KEY (`id`),
   UNIQUE KEY `idx_users_username` (`username`),
   KEY `idx_users_deleted_at` (`deleted_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE `bank_accounts` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `created_at` datetime(3) DEFAULT NULL,
+  `updated_at` datetime(3) DEFAULT NULL,
+  `deleted_at` datetime(3) DEFAULT NULL,
+  `bank` varchar(255),
+  `va_number` varchar(255),
+  `user_id` bigint unsigned DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_bank_accounts_deleted_at` (`deleted_at`),
+  KEY `fk_bank_accounts_user` (`user_id`),
+  CONSTRAINT `fk_bank_accounts_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 CREATE TABLE `services` (
@@ -42,6 +55,7 @@ CREATE TABLE `orders` (
   `phone` varchar(255),
   `email` varchar(255),
   `address` text,
+  `note` text,
   `user_id` bigint unsigned DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `idx_orders_deleted_at` (`deleted_at`),
@@ -56,6 +70,20 @@ CREATE TABLE `order_services` (
   KEY `fk_order_services_service` (`service_id`),
   CONSTRAINT `fk_order_services_order` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`),
   CONSTRAINT `fk_order_services_service` FOREIGN KEY (`service_id`) REFERENCES `services` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE `payments` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `created_at` datetime(3) DEFAULT NULL,
+  `updated_at` datetime(3) DEFAULT NULL,
+  `deleted_at` datetime(3) DEFAULT NULL,
+  `amount` double DEFAULT NULL,
+  `status` varchar(255),
+  `order_id` bigint unsigned DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_payments_deleted_at` (`deleted_at`),
+  KEY `fk_payments_order` (`order_id`),
+  CONSTRAINT `fk_payments_order` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 CREATE TABLE `feedbacks` (
@@ -78,8 +106,10 @@ CREATE TABLE `feedbacks` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- +goose Down
-DROP TABLE `feedbacks`;
-DROP TABLE `order_services`;
-DROP TABLE `orders`;
-DROP TABLE `services`;
-DROP TABLE `users`;
+DROP TABLE IF EXISTS `feedbacks`;
+DROP TABLE IF EXISTS `payments`;
+DROP TABLE IF EXISTS `order_services`;
+DROP TABLE IF EXISTS `orders`;
+DROP TABLE IF EXISTS `services`;
+DROP TABLE IF EXISTS `bank_accounts`;
+DROP TABLE IF EXISTS `users`;

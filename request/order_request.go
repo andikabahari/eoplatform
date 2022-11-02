@@ -8,6 +8,7 @@ type CreateOrderRequest struct {
 	Phone      string `json:"phone"`
 	Email      string `json:"email"`
 	Address    string `json:"address"`
+	Note       string `json:"note"`
 	ServiceIDs []uint `json:"service_ids"`
 }
 

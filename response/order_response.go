@@ -15,6 +15,7 @@ type OrderResponse struct {
 	Phone       string             `json:"phone"`
 	Email       string             `json:"email"`
 	Address     string             `json:"address"`
+	Note        string             `json:"note"`
 	User        *UserResponse      `json:"user,omitempty"`
 	Services    *[]ServiceResponse `json:"services,omitempty"`
 }
@@ -28,6 +29,7 @@ func NewOrderResponse(order model.Order) *OrderResponse {
 	res.Phone = order.Phone
 	res.Email = order.Email
 	res.Address = order.Address
+	res.Note = order.Note
 	res.User = NewUserResponse(order.User)
 
 	services := make([]ServiceResponse, 0)
@@ -39,6 +41,8 @@ func NewOrderResponse(order model.Order) *OrderResponse {
 		tmp.Name = service.Name
 		tmp.Description = service.Description
 		tmp.Cost = service.Cost
+		tmp.Phone = service.Phone
+		tmp.Email = service.Email
 		tmp.User = nil
 		services = append(services, tmp)
 	}
@@ -48,7 +52,7 @@ func NewOrderResponse(order model.Order) *OrderResponse {
 	return &res
 }
 
-func NewMyOrdersResponse(orders []model.Order) *[]OrderResponse {
+func NewOrdersResponse(orders []model.Order) *[]OrderResponse {
 	res := make([]OrderResponse, 0)
 	for i, order := range orders {
 		tmp := OrderResponse{}
@@ -59,6 +63,7 @@ func NewMyOrdersResponse(orders []model.Order) *[]OrderResponse {
 		tmp.Phone = order.Phone
 		tmp.Email = order.Email
 		tmp.Address = order.Address
+		tmp.Note = order.Note
 		tmp.User = nil
 		res = append(res, tmp)
 
@@ -73,40 +78,8 @@ func NewMyOrdersResponse(orders []model.Order) *[]OrderResponse {
 			tmp.Name = service.Name
 			tmp.Description = service.Description
 			tmp.Cost = service.Cost
-			tmp.User = nil
-			services = append(services, tmp)
-		}
-
-		res[i].TotalCost = totalCost
-		res[i].Services = &services
-	}
-
-	return &res
-}
-
-func NewCustomerOrdersResponse(orders []model.Order) *[]OrderResponse {
-	res := make([]OrderResponse, 0)
-	for i, order := range orders {
-		tmp := OrderResponse{}
-		tmp.ID = order.ID
-		tmp.CreatedAt = order.CreatedAt
-		tmp.IsAccepted = order.IsAccepted
-		tmp.IsCompleted = order.IsCompleted
-		tmp.Phone = order.Phone
-		tmp.Email = order.Email
-		tmp.Address = order.Address
-		tmp.User = NewUserResponse(order.User)
-		res = append(res, tmp)
-
-		var totalCost float64
-
-		services := make([]ServiceResponse, 0)
-		for _, service := range order.Services {
-			tmp := ServiceResponse{}
-			tmp.ID = service.ID
-			tmp.Name = service.Name
-			tmp.Description = service.Description
-			tmp.Cost = service.Cost
+			tmp.Phone = service.Phone
+			tmp.Email = service.Email
 			tmp.User = nil
 			services = append(services, tmp)
 		}

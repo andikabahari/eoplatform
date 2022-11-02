@@ -24,3 +24,12 @@ func NewFeedbackResponse(feedback model.Feedback) *FeedbackResponse {
 
 	return &res
 }
+
+func NewFeedbacksResponse(feedbacks []model.Feedback) *[]FeedbackResponse {
+	res := make([]FeedbackResponse, 0)
+	for _, feedback := range feedbacks {
+		res = append(res, *NewFeedbackResponse(feedback))
+	}
+
+	return &res
+}

@@ -2,6 +2,7 @@ package handler
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 
@@ -24,7 +25,36 @@ func NewOrderHandler(server *s.Server) *OrderHandler {
 	return &OrderHandler{server}
 }
 
+func (h *OrderHandler) GetOrders(c echo.Context) error {
+	userToken := c.Get("user").(*jwt.Token)
+	claims := userToken.Claims.(*helper.JWTCustomClaims)
+
+	orders := make([]model.Order, 0)
+	orderRepository := repository.NewOrderRepository(h.server.DB)
+	if claims.Role == "customer" {
+		orderRepository.GetOrdersForCustomer(&orders, claims.ID)
+	}
+	if claims.Role == "organizer" {
+		orderRepository.GetOrdersForOrganizer(&orders, claims.ID)
+	}
+
+	return c.JSON(http.StatusOK, echo.Map{
+		"message": "fetch orders successful",
+		"data":    response.NewOrdersResponse(orders),
+	})
+}
+
 func (h *OrderHandler) CreateOrder(c echo.Context) error {
+	userToken := c.Get("user").(*jwt.Token)
+	claims := userToken.Claims.(*helper.JWTCustomClaims)
+
+	if claims.Role != "customer" {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"message": "create order failure",
+			"error":   "unauthorized",
+		})
+	}
+
 	req := request.CreateOrderRequest{}
 
 	if err := c.Bind(&req); err != nil {
@@ -33,7 +63,8 @@ func (h *OrderHandler) CreateOrder(c echo.Context) error {
 
 	if err := req.Validate(); err != nil {
 		return c.JSON(http.StatusBadRequest, echo.Map{
-			"error": err,
+			"message": "validation error",
+			"error":   err,
 		})
 	}
 
@@ -51,15 +82,12 @@ func (h *OrderHandler) CreateOrder(c echo.Context) error {
 
 		if service.ID == 0 || service.UserID != first.UserID {
 			return c.JSON(http.StatusBadRequest, echo.Map{
-				"error": "cannot proceed your order",
+				"message": "cannot proceed your order",
 			})
 		}
 
 		services = append(services, service)
 	}
-
-	userToken := c.Get("user").(*jwt.Token)
-	claims := userToken.Claims.(*helper.JWTCustomClaims)
 
 	user := model.User{}
 	userRepository := repository.NewUserRepository(h.server.DB)
@@ -71,6 +99,7 @@ func (h *OrderHandler) CreateOrder(c echo.Context) error {
 	order.Phone = req.Phone
 	order.Email = req.Email
 	order.Address = req.Address
+	order.Note = req.Note
 	order.UserID = claims.ID
 	order.Services = services
 
@@ -80,7 +109,8 @@ func (h *OrderHandler) CreateOrder(c echo.Context) error {
 	order.User = user
 
 	return c.JSON(http.StatusOK, echo.Map{
-		"data": response.NewOrderResponse(order),
+		"message": "create order successful",
+		"data":    response.NewOrderResponse(order),
 	})
 }
 
@@ -91,39 +121,137 @@ func (h *OrderHandler) AcceptOrCompleteOrder(c echo.Context) error {
 
 	if order.ID == 0 {
 		return c.JSON(http.StatusNotFound, echo.Map{
-			"error": "order not found",
+			"message": "accept or complete order failure",
+			"error":   "order not found",
 		})
 	}
 
 	userToken := c.Get("user").(*jwt.Token)
 	claims := userToken.Claims.(*helper.JWTCustomClaims)
 
-	if order.UserID != claims.ID {
+	if order.Services[0].UserID != claims.ID {
 		return c.JSON(http.StatusUnauthorized, echo.Map{
-			"error": "unauthorized",
+			"message": "accept or complete order failure",
+			"error":   "unauthorized",
 		})
 	}
 
-	message := ""
 	segment := strings.Split(c.Path(), "/")[4]
-	if segment == "accept" {
+	if segment == "accept" && !order.IsAccepted {
 		order.IsAccepted = true
-		message = "Your request has been accepted, please contact us as soon as possible."
+
+		var totalCost float64
+		for _, service := range order.Services {
+			totalCost += service.Cost
+		}
+
+		payment := model.Payment{}
+		payment.OrderID = order.ID
+		payment.Amount = totalCost
+		payment.Status = "pending"
+		h.server.DB.Debug().Omit("Order").Save(&payment)
+
+		bankAccount := model.BankAccount{}
+		h.server.DB.Debug().Where("user_id = ?", claims.ID).First(&bankAccount)
+
+		helper.ChargeOrder(map[string]any{
+			"payment_type": "bank_transfer",
+			"transaction_details": map[string]any{
+				"order_id":     order.ID,
+				"gross_amount": totalCost,
+			},
+			"bank_transfer": map[string]any{
+				"bank":      bankAccount.Bank,
+				"va_number": bankAccount.VANumber,
+			},
+			"customer_details": map[string]any{
+				"phone":   order.Phone,
+				"email":   order.Email,
+				"address": order.Address,
+			},
+		})
 	}
 	if segment == "complete" && order.IsAccepted {
 		order.IsCompleted = true
-		message = "Your order has been completed."
-	}
-
-	if message != "" {
-		if err := helper.SendEmail([]string{order.Email}, message); err != nil {
-			return err
-		}
 	}
 
 	h.server.DB.Debug().Omit(clause.Associations).Save(order)
 
 	return c.JSON(http.StatusOK, echo.Map{
-		"data": response.NewOrderResponse(order),
+		"message": "accept or complete order successful",
+		"data":    response.NewOrderResponse(order),
+	})
+}
+
+func (h *OrderHandler) CancelOrder(c echo.Context) error {
+	order := model.Order{}
+	orderRepository := repository.NewOrderRepository(h.server.DB)
+	orderRepository.Find(&order, c.Param("id"))
+
+	if order.ID == 0 {
+		return c.JSON(http.StatusNotFound, echo.Map{
+			"message": "cancel order failure",
+			"error":   "order not found",
+		})
+	}
+
+	userToken := c.Get("user").(*jwt.Token)
+	claims := userToken.Claims.(*helper.JWTCustomClaims)
+
+	if order.UserID != claims.ID || claims.Role != "organizer" {
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"message": "cancel service failure",
+			"error":   "unauthorized",
+		})
+	}
+
+	orderRepository.Delete(&order)
+
+	return c.JSON(http.StatusOK, echo.Map{
+		"message": "cancel order successful",
+		"data": echo.Map{
+			"kind":    "order",
+			"id":      c.Param("id"),
+			"deleted": true,
+		},
+	})
+}
+
+func (h *OrderHandler) PaymentStatus(c echo.Context) error {
+	req := request.MidtransTransactionNotificationRequest{}
+
+	if err := c.Bind(&req); err != nil {
+		return err
+	}
+	log.Println("Midtrans request:", req)
+
+	payment := model.Payment{}
+	paymentRepository := repository.NewPaymentRepository(h.server.DB)
+	paymentRepository.FindOnlyByOrderID(&payment, req.OrderID)
+
+	if payment.OrderID == 0 {
+		return c.JSON(http.StatusNotFound, echo.Map{
+			"message": "payment failure",
+			"error":   "order not found",
+		})
+	}
+
+	switch req.Status {
+	case "settlement":
+	case "capture":
+		payment.Status = "success"
+		paymentRepository.Create(&payment)
+	case "deny":
+	case "cancel":
+	case "expire":
+		payment.Status = "fail"
+		order := model.Order{}
+		orderRepository := repository.NewOrderRepository(h.server.DB)
+		orderRepository.FindOnly(&order, req.OrderID)
+		orderRepository.Delete(&order)
+	}
+
+	return c.JSON(http.StatusOK, echo.Map{
+		"message": "payment successful",
 	})
 }
