@@ -28,7 +28,8 @@ func (h *BankAccountHandler) GetBankAccounts(c echo.Context) error {
 
 	if claims.Role != "organizer" {
 		return c.JSON(http.StatusUnauthorized, echo.Map{
-			"error": "unauthorized",
+			"message": "fetch bank account failure",
+			"error":   "unauthorized",
 		})
 	}
 
@@ -37,7 +38,8 @@ func (h *BankAccountHandler) GetBankAccounts(c echo.Context) error {
 	bankAccountRepository.Get(&bankAccounts, claims.ID)
 
 	return c.JSON(http.StatusOK, echo.Map{
-		"data": response.NewBankAccountsResponse(bankAccounts),
+		"message": "fetch bank account successful",
+		"data":    response.NewBankAccountsResponse(bankAccounts),
 	})
 }
 
@@ -47,7 +49,8 @@ func (h *BankAccountHandler) CreateBankAccount(c echo.Context) error {
 
 	if claims.Role != "organizer" {
 		return c.JSON(http.StatusUnauthorized, echo.Map{
-			"error": "unauthorized",
+			"message": "create bank account failure",
+			"error":   "unauthorized",
 		})
 	}
 
@@ -59,7 +62,8 @@ func (h *BankAccountHandler) CreateBankAccount(c echo.Context) error {
 
 	if err := req.Validate(); err != nil {
 		return c.JSON(http.StatusBadRequest, echo.Map{
-			"error": err,
+			"message": "validation error",
+			"error":   err,
 		})
 	}
 
@@ -72,7 +76,8 @@ func (h *BankAccountHandler) CreateBankAccount(c echo.Context) error {
 	bankAccountRepository.Create(&bankAccount)
 
 	return c.JSON(http.StatusOK, echo.Map{
-		"data": response.NewBankAccountResponse(bankAccount),
+		"message": "create bank account successful",
+		"data":    response.NewBankAccountResponse(bankAccount),
 	})
 }
 
@@ -85,7 +90,8 @@ func (h *BankAccountHandler) UpdateBankAccount(c echo.Context) error {
 
 	if err := req.Validate(); err != nil {
 		return c.JSON(http.StatusBadRequest, echo.Map{
-			"error": err,
+			"message": "validation error",
+			"error":   err,
 		})
 	}
 
@@ -98,14 +104,16 @@ func (h *BankAccountHandler) UpdateBankAccount(c echo.Context) error {
 
 	if bankAccount.ID == 0 {
 		return c.JSON(http.StatusNotFound, echo.Map{
-			"error": "bank account not found",
+			"message": "update bank account failure",
+			"error":   "bank account not found",
 		})
 	}
 
 	bankAccountRepository.Update(&bankAccount, &req)
 
 	return c.JSON(http.StatusOK, echo.Map{
-		"data": response.NewBankAccountResponse(bankAccount),
+		"message": "update bank account successful",
+		"data":    response.NewBankAccountResponse(bankAccount),
 	})
 }
 
