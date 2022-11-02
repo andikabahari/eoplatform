@@ -29,7 +29,8 @@ func (h *RegisterHandler) Register(c echo.Context) error {
 
 	if err := req.Validate(); err != nil {
 		return c.JSON(http.StatusBadRequest, echo.Map{
-			"error": err,
+			"message": "validation error",
+			"error":   err,
 		})
 	}
 
@@ -48,6 +49,7 @@ func (h *RegisterHandler) Register(c echo.Context) error {
 	userRepository.Create(&user)
 
 	return c.JSON(http.StatusOK, echo.Map{
-		"data": response.NewUserResponse(user),
+		"message": "registration successful",
+		"data":    response.NewUserResponse(user),
 	})
 }
