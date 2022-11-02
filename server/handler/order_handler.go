@@ -178,11 +178,11 @@ func (h *OrderHandler) AcceptOrCompleteOrder(c echo.Context) error {
 
 func (h *OrderHandler) PaymentStatus(c echo.Context) error {
 	req := request.MidtransTransactionNotificationRequest{}
-	log.Println("Midtrans request:", req)
 
 	if err := c.Bind(&req); err != nil {
 		return err
 	}
+	log.Println("Midtrans request:", req)
 
 	payment := model.Payment{}
 	h.server.DB.Debug().Where("order_id = ?", req.OrderID).Find(&payment)
