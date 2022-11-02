@@ -219,11 +219,13 @@ func (h *OrderHandler) PaymentStatus(c echo.Context) error {
 	log.Println("Midtrans request:", req)
 
 	payment := model.Payment{}
-	h.server.DB.Debug().Where("order_id = ?", req.OrderID).Find(&payment)
+	paymentRepository := repository.NewPaymentRepository(h.server.DB)
+	paymentRepository.FindOnlyByOrderID(&payment, req.OrderID)
 
 	if payment.OrderID == 0 {
-		return c.JSON(http.StatusUnauthorized, echo.Map{
-			"error": "order not found",
+		return c.JSON(http.StatusNotFound, echo.Map{
+			"message": "payment failure",
+			"error":   "order not found",
 		})
 	}
 
@@ -231,15 +233,18 @@ func (h *OrderHandler) PaymentStatus(c echo.Context) error {
 	case "settlement":
 	case "capture":
 		payment.Status = "success"
+		paymentRepository.Create(&payment)
 	case "deny":
 	case "cancel":
 	case "expire":
 		payment.Status = "fail"
+		order := model.Order{}
+		orderRepository := repository.NewOrderRepository(h.server.DB)
+		orderRepository.FindOnly(&order, req.OrderID)
+		orderRepository.Delete(&order)
 	}
 
-	h.server.DB.Debug().Omit("Order").Save(&payment)
-
 	return c.JSON(http.StatusOK, echo.Map{
-		"message": "order status updated",
+		"message": "payment successful",
 	})
 }
