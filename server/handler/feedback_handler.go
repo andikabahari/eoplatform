@@ -21,7 +21,26 @@ func NewFeedbackHandler(server *s.Server) *FeedbackHandler {
 	return &FeedbackHandler{server}
 }
 
+func (h *FeedbackHandler) GetFeedbacks(c echo.Context) error {
+	feedbacks := make([]model.Feedback, 0)
+	feedbackpository := repository.NewFeedbackRepository(h.server.DB)
+	feedbackpository.Get(&feedbacks, c.QueryParam("to_user_id"))
+
+	return c.JSON(http.StatusOK, echo.Map{
+		"data": response.NewFeedbacksResponse(feedbacks),
+	})
+}
+
 func (h *FeedbackHandler) CreateFeedback(c echo.Context) error {
+	userToken := c.Get("user").(*jwt.Token)
+	claims := userToken.Claims.(*helper.JWTCustomClaims)
+
+	if claims.Role != "customer" {
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"error": "unauthorized",
+		})
+	}
+
 	req := request.CreateFeedbackRequest{}
 
 	if err := c.Bind(&req); err != nil {
@@ -33,9 +52,6 @@ func (h *FeedbackHandler) CreateFeedback(c echo.Context) error {
 			"error": err,
 		})
 	}
-
-	userToken := c.Get("user").(*jwt.Token)
-	claims := userToken.Claims.(*helper.JWTCustomClaims)
 
 	feedback := model.Feedback{}
 	feedback.Description = req.Description
