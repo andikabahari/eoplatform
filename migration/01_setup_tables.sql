@@ -37,7 +37,6 @@ CREATE TABLE `services` (
   `cost` double DEFAULT NULL,
   `phone` varchar(255),
   `email` varchar(255),
-  `is_published` tinyint(1) DEFAULT NULL,
   `description` text,
   PRIMARY KEY (`id`),
   KEY `idx_services_deleted_at` (`deleted_at`),
