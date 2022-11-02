@@ -27,7 +27,8 @@ func (h *ServiceHandler) GetServices(c echo.Context) error {
 	serviceRepository.Get(&services, c.QueryParam("q"))
 
 	return c.JSON(http.StatusOK, echo.Map{
-		"data": response.NewServicesResponse(services),
+		"message": "fetch services successful",
+		"data":    response.NewServicesResponse(services),
 	})
 }
 
@@ -38,12 +39,14 @@ func (h *ServiceHandler) FindService(c echo.Context) error {
 
 	if service.ID == 0 {
 		return c.JSON(http.StatusNotFound, echo.Map{
-			"error": "service not found",
+			"message": "fetch service failure",
+			"error":   "service not found",
 		})
 	}
 
 	return c.JSON(http.StatusOK, echo.Map{
-		"data": response.NewServiceResponse(service),
+		"message": "fetch service successful",
+		"data":    response.NewServiceResponse(service),
 	})
 }
 
@@ -56,7 +59,8 @@ func (h *ServiceHandler) CreateService(c echo.Context) error {
 
 	if err := req.Validate(); err != nil {
 		return c.JSON(http.StatusBadRequest, echo.Map{
-			"error": err,
+			"message": "validation error",
+			"error":   err,
 		})
 	}
 
@@ -76,7 +80,8 @@ func (h *ServiceHandler) CreateService(c echo.Context) error {
 	serviceRepository.Create(&service)
 
 	return c.JSON(http.StatusOK, echo.Map{
-		"data": response.NewServiceResponse(service),
+		"message": "create service successful",
+		"data":    response.NewServiceResponse(service),
 	})
 }
 
@@ -89,7 +94,8 @@ func (h *ServiceHandler) UpdateService(c echo.Context) error {
 
 	if err := req.Validate(); err != nil {
 		return c.JSON(http.StatusBadRequest, echo.Map{
-			"error": err,
+			"message": "validation error",
+			"error":   err,
 		})
 	}
 
@@ -99,7 +105,8 @@ func (h *ServiceHandler) UpdateService(c echo.Context) error {
 
 	if service.ID == 0 {
 		return c.JSON(http.StatusNotFound, echo.Map{
-			"error": "service not found",
+			"message": "update service failure",
+			"error":   "service not found",
 		})
 	}
 
@@ -108,7 +115,8 @@ func (h *ServiceHandler) UpdateService(c echo.Context) error {
 
 	if service.UserID != claims.ID {
 		return c.JSON(http.StatusUnauthorized, echo.Map{
-			"error": "unauthorized",
+			"message": "update service failure",
+			"error":   "unauthorized",
 		})
 	}
 
@@ -117,14 +125,16 @@ func (h *ServiceHandler) UpdateService(c echo.Context) error {
 	h.server.DB.Raw(query, service.ID).Scan(&count)
 	if count > 0 {
 		return c.JSON(http.StatusForbidden, echo.Map{
-			"error": "forbidden",
+			"message": "update service failure",
+			"error":   "forbidden",
 		})
 	}
 
 	serviceRepository.Update(&service, &req)
 
 	return c.JSON(http.StatusOK, echo.Map{
-		"data": response.NewServiceResponse(service),
+		"message": "update service successful",
+		"data":    response.NewServiceResponse(service),
 	})
 }
 
@@ -135,7 +145,8 @@ func (h *ServiceHandler) DeleteService(c echo.Context) error {
 
 	if service.ID == 0 {
 		return c.JSON(http.StatusNotFound, echo.Map{
-			"error": "service not found",
+			"message": "delete service failure",
+			"error":   "service not found",
 		})
 	}
 
@@ -144,13 +155,15 @@ func (h *ServiceHandler) DeleteService(c echo.Context) error {
 
 	if service.UserID != claims.ID {
 		return c.JSON(http.StatusUnauthorized, echo.Map{
-			"error": "unauthorized",
+			"message": "delete service failure",
+			"error":   "unauthorized",
 		})
 	}
 
 	serviceRepository.Delete(&service)
 
 	return c.JSON(http.StatusOK, echo.Map{
+		"message": "delete service successful",
 		"data": echo.Map{
 			"kind":    "service",
 			"id":      c.Param("id"),
