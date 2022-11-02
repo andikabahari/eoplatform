@@ -51,6 +51,16 @@ func (h *ServiceHandler) FindService(c echo.Context) error {
 }
 
 func (h *ServiceHandler) CreateService(c echo.Context) error {
+	userToken := c.Get("user").(*jwt.Token)
+	claims := userToken.Claims.(*helper.JWTCustomClaims)
+
+	if claims.Role != "organizer" {
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"message": "create service failure",
+			"error":   "unauthorized",
+		})
+	}
+
 	req := request.CreateServiceRequest{}
 
 	if err := c.Bind(&req); err != nil {
@@ -63,9 +73,6 @@ func (h *ServiceHandler) CreateService(c echo.Context) error {
 			"error":   err,
 		})
 	}
-
-	user := c.Get("user").(*jwt.Token)
-	claims := user.Claims.(*helper.JWTCustomClaims)
 
 	service := model.Service{}
 	service.UserID = claims.ID
