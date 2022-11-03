@@ -2,6 +2,7 @@ package testhelper
 
 import (
 	"database/sql"
+	"log"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"gorm.io/driver/mysql"
@@ -14,7 +15,7 @@ func Init(conn *sql.DB) *gorm.DB {
 		Conn:                      conn,
 	}))
 	if err != nil {
-		panic(err)
+		log.Fatal("Can't connect to DB!")
 	}
 
 	return db
@@ -23,7 +24,7 @@ func Init(conn *sql.DB) *gorm.DB {
 func Mock() (*sql.DB, sqlmock.Sqlmock) {
 	conn, mock, err := sqlmock.New()
 	if err != nil {
-		panic(err)
+		log.Fatal("Can't mock DB!")
 	}
 
 	return conn, mock
