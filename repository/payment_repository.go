@@ -2,11 +2,13 @@ package repository
 
 import (
 	"github.com/andikabahari/eoplatform/model"
+	"github.com/andikabahari/eoplatform/request"
 	"gorm.io/gorm"
 )
 
 type PaymentRepository interface {
 	Create(payment *model.Payment)
+	Update(payment *model.Payment, req *request.MidtransTransactionNotificationRequest)
 	FindOnlyByOrderID(payment *model.Payment, orderID any)
 }
 
@@ -19,7 +21,13 @@ func NewPaymentRepository(db *gorm.DB) *paymentRepository {
 }
 
 func (r *paymentRepository) Create(payment *model.Payment) {
-	r.db.Debug().Omit("Order").Save(&payment)
+	r.db.Debug().Omit("Order").Save(payment)
+}
+
+func (r *paymentRepository) Update(payment *model.Payment, req *request.MidtransTransactionNotificationRequest) {
+	payment.Status = req.Status
+
+	r.db.Debug().Omit("Order").Save(payment)
 }
 
 func (r *paymentRepository) FindOnlyByOrderID(payment *model.Payment, orderID any) {

@@ -1,11 +1,18 @@
 package model
 
-import "gorm.io/gorm"
+import (
+	"time"
+
+	"gorm.io/gorm"
+)
 
 type Order struct {
 	gorm.Model
 	IsAccepted  bool
 	IsCompleted bool
+	DateOfEvent time.Time
+	FirstName   string
+	LastName    string
 	Phone       string
 	Email       string
 	Address     string

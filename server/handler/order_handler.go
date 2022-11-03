@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/andikabahari/eoplatform/helper"
 	"github.com/andikabahari/eoplatform/model"
@@ -68,6 +69,11 @@ func (h *OrderHandler) CreateOrder(c echo.Context) error {
 		})
 	}
 
+	dateOfEvent, err := time.Parse("2006-01-02", req.DateOfEvent)
+	if err != nil {
+		return err
+	}
+
 	serviceRepository := repository.NewServiceRepository(h.server.DB)
 	services := make([]model.Service, 0)
 
@@ -96,6 +102,9 @@ func (h *OrderHandler) CreateOrder(c echo.Context) error {
 	order := model.Order{}
 	order.IsAccepted = false
 	order.IsCompleted = false
+	order.DateOfEvent = dateOfEvent
+	order.FirstName = req.FirstName
+	order.LastName = req.LastName
 	order.Phone = req.Phone
 	order.Email = req.Email
 	order.Address = req.Address
@@ -149,15 +158,17 @@ func (h *OrderHandler) AcceptOrCompleteOrder(c echo.Context) error {
 		payment.OrderID = order.ID
 		payment.Amount = totalCost
 		payment.Status = "pending"
-		h.server.DB.Debug().Omit("Order").Save(&payment)
+		paymentRepository := repository.NewPaymentRepository(h.server.DB)
+		paymentRepository.Create(&payment)
 
 		bankAccount := model.BankAccount{}
-		h.server.DB.Debug().Where("user_id = ?", claims.ID).First(&bankAccount)
+		bankAccountRepository := repository.NewBankAccountRepository(h.server.DB)
+		bankAccountRepository.FindByUserID(&bankAccount, claims.ID)
 
-		helper.ChargeOrder(map[string]any{
+		transaction := map[string]any{
 			"payment_type": "bank_transfer",
 			"transaction_details": map[string]any{
-				"order_id":     order.ID,
+				"order_id":     fmt.Sprintf("EOP-%d", order.ID),
 				"gross_amount": totalCost,
 			},
 			"bank_transfer": map[string]any{
@@ -165,11 +176,14 @@ func (h *OrderHandler) AcceptOrCompleteOrder(c echo.Context) error {
 				"va_number": bankAccount.VANumber,
 			},
 			"customer_details": map[string]any{
-				"phone":   order.Phone,
-				"email":   order.Email,
-				"address": order.Address,
+				"first_name": order.FirstName,
+				"last_name":  order.LastName,
+				"phone":      order.Phone,
+				"email":      order.Email,
+				"address":    order.Address,
 			},
-		})
+		}
+		helper.ChargeOrder(transaction)
 	}
 	if segment == "complete" && order.IsAccepted {
 		order.IsCompleted = true
@@ -198,7 +212,7 @@ func (h *OrderHandler) CancelOrder(c echo.Context) error {
 	userToken := c.Get("user").(*jwt.Token)
 	claims := userToken.Claims.(*helper.JWTCustomClaims)
 
-	if order.UserID != claims.ID || claims.Role != "organizer" {
+	if order.UserID != claims.ID {
 		return c.JSON(http.StatusUnauthorized, echo.Map{
 			"message": "cancel service failure",
 			"error":   "unauthorized",
@@ -225,9 +239,11 @@ func (h *OrderHandler) PaymentStatus(c echo.Context) error {
 	}
 	log.Println("Midtrans request:", req)
 
+	orderID := strings.Split(req.OrderID, "-")[1]
+
 	payment := model.Payment{}
 	paymentRepository := repository.NewPaymentRepository(h.server.DB)
-	paymentRepository.FindOnlyByOrderID(&payment, req.OrderID)
+	paymentRepository.FindOnlyByOrderID(&payment, orderID)
 
 	if payment.OrderID == 0 {
 		return c.JSON(http.StatusNotFound, echo.Map{
@@ -236,20 +252,18 @@ func (h *OrderHandler) PaymentStatus(c echo.Context) error {
 		})
 	}
 
-	switch req.Status {
-	case "settlement":
-	case "capture":
-		payment.Status = "success"
-		paymentRepository.Create(&payment)
-	case "deny":
-	case "cancel":
-	case "expire":
-		payment.Status = "fail"
+	if req.Status == "settlement" || req.Status == "capture" {
+		req.Status = "success"
+	}
+	if req.Status == "deny" || req.Status == "cancel" || req.Status == "expire" {
+		req.Status = "fail"
+
 		order := model.Order{}
 		orderRepository := repository.NewOrderRepository(h.server.DB)
-		orderRepository.FindOnly(&order, req.OrderID)
+		orderRepository.FindOnly(&order, orderID)
 		orderRepository.Delete(&order)
 	}
+	paymentRepository.Update(&payment, &req)
 
 	return c.JSON(http.StatusOK, echo.Map{
 		"message": "payment successful",
