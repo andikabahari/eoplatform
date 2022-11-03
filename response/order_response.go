@@ -9,9 +9,12 @@ import (
 type OrderResponse struct {
 	ID          uint               `json:"id"`
 	CreatedAt   time.Time          `json:"created_at"`
+	DateOfEvent string             `json:"date_of_event"`
 	TotalCost   float64            `json:"total_cost"`
 	IsAccepted  bool               `json:"is_accepted"`
 	IsCompleted bool               `json:"is_completed"`
+	FirstName   string             `json:"first_name"`
+	LastName    string             `json:"last_name"`
 	Phone       string             `json:"phone"`
 	Email       string             `json:"email"`
 	Address     string             `json:"address"`
@@ -24,8 +27,11 @@ func NewOrderResponse(order model.Order) *OrderResponse {
 	res := OrderResponse{}
 	res.ID = order.ID
 	res.CreatedAt = order.CreatedAt
+	res.DateOfEvent = order.DateOfEvent.Format("2006-01-02")
 	res.IsAccepted = order.IsAccepted
 	res.IsCompleted = order.IsCompleted
+	res.FirstName = order.FirstName
+	res.LastName = order.LastName
 	res.Phone = order.Phone
 	res.Email = order.Email
 	res.Address = order.Address
@@ -58,8 +64,11 @@ func NewOrdersResponse(orders []model.Order) *[]OrderResponse {
 		tmp := OrderResponse{}
 		tmp.ID = order.ID
 		tmp.CreatedAt = order.CreatedAt
+		tmp.DateOfEvent = order.DateOfEvent.Format("2006-01-02")
 		tmp.IsAccepted = order.IsAccepted
 		tmp.IsCompleted = order.IsCompleted
+		tmp.FirstName = order.FirstName
+		tmp.LastName = order.LastName
 		tmp.Phone = order.Phone
 		tmp.Email = order.Email
 		tmp.Address = order.Address

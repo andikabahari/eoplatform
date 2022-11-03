@@ -8,7 +8,6 @@ type ServiceResponse struct {
 	Cost        float64       `json:"cost"`
 	Phone       string        `json:"phone"`
 	Email       string        `json:"email"`
-	IsPublished bool          `json:"is_published"`
 	Description string        `json:"description"`
 	User        *UserResponse `json:"user,omitempty"`
 }
@@ -20,7 +19,6 @@ func NewServiceResponse(service model.Service) *ServiceResponse {
 	res.Cost = service.Cost
 	res.Phone = service.Phone
 	res.Email = service.Email
-	res.IsPublished = service.IsPublished
 	res.Description = service.Description
 	if service.User.ID > 0 {
 		res.User = NewUserResponse(service.User)
@@ -39,7 +37,6 @@ func NewServicesResponse(services []model.Service) *[]ServiceResponse {
 		tmp.Cost = service.Cost
 		tmp.Phone = service.Phone
 		tmp.Email = service.Email
-		tmp.IsPublished = service.IsPublished
 		tmp.Description = service.Description
 		tmp.User = NewUserResponse(service.User)
 		res = append(res, tmp)

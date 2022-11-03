@@ -80,7 +80,6 @@ func (h *ServiceHandler) CreateService(c echo.Context) error {
 	service.Cost = req.Cost
 	service.Phone = req.Phone
 	service.Email = req.Email
-	service.IsPublished = req.IsPublished
 	service.Description = req.Description
 
 	serviceRepository := repository.NewServiceRepository(h.server.DB)

@@ -10,7 +10,6 @@ type BasicService struct {
 	Cost        float64 `json:"cost"`
 	Phone       string  `json:"phone"`
 	Email       string  `json:"email"`
-	IsPublished bool    `json:"is_published"`
 	Description string  `json:"description"`
 }
 
@@ -20,7 +19,6 @@ func (b BasicService) Validate() error {
 		validation.Field(&b.Cost, validation.Required),
 		validation.Field(&b.Phone, validation.Required, validation.Length(1, 20)),
 		validation.Field(&b.Email, validation.Required, is.Email),
-		validation.Field(&b.IsPublished, validation.Required),
 		validation.Field(&b.Description, validation.Required, validation.Length(1, 500)),
 	)
 }

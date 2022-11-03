@@ -46,7 +46,6 @@ func (r *serviceRepository) Update(service *model.Service, req *request.UpdateSe
 	service.Cost = req.Cost
 	service.Phone = req.Phone
 	service.Email = req.Email
-	service.IsPublished = req.IsPublished
 	service.Description = req.Description
 
 	r.db.Debug().Omit("User").Save(service)
