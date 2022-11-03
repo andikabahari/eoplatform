@@ -166,7 +166,7 @@ func (h *OrderHandler) AcceptOrCompleteOrder(c echo.Context) error {
 		transaction := map[string]any{
 			"payment_type": "bank_transfer",
 			"transaction_details": map[string]any{
-				"order_id":     order.ID,
+				"order_id":     fmt.Sprintf("EOP-%d", order.ID),
 				"gross_amount": totalCost,
 			},
 			"bank_transfer": map[string]any{
@@ -237,9 +237,11 @@ func (h *OrderHandler) PaymentStatus(c echo.Context) error {
 	}
 	log.Println("Midtrans request:", req)
 
+	orderID := strings.Split(req.OrderID, "-")[1]
+
 	payment := model.Payment{}
 	paymentRepository := repository.NewPaymentRepository(h.server.DB)
-	paymentRepository.FindOnlyByOrderID(&payment, req.OrderID)
+	paymentRepository.FindOnlyByOrderID(&payment, orderID)
 
 	if payment.OrderID == 0 {
 		return c.JSON(http.StatusNotFound, echo.Map{
@@ -256,7 +258,7 @@ func (h *OrderHandler) PaymentStatus(c echo.Context) error {
 
 		order := model.Order{}
 		orderRepository := repository.NewOrderRepository(h.server.DB)
-		orderRepository.FindOnly(&order, req.OrderID)
+		orderRepository.FindOnly(&order, orderID)
 		orderRepository.Delete(&order)
 	}
 	paymentRepository.Update(&payment, &req)
