@@ -210,7 +210,7 @@ func (h *OrderHandler) CancelOrder(c echo.Context) error {
 	userToken := c.Get("user").(*jwt.Token)
 	claims := userToken.Claims.(*helper.JWTCustomClaims)
 
-	if order.UserID != claims.ID || claims.Role != "organizer" {
+	if order.UserID != claims.ID {
 		return c.JSON(http.StatusUnauthorized, echo.Map{
 			"message": "cancel service failure",
 			"error":   "unauthorized",
