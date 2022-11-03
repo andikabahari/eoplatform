@@ -158,10 +158,12 @@ func (h *OrderHandler) AcceptOrCompleteOrder(c echo.Context) error {
 		payment.OrderID = order.ID
 		payment.Amount = totalCost
 		payment.Status = "pending"
-		h.server.DB.Debug().Omit("Order").Save(&payment)
+		paymentRepository := repository.NewPaymentRepository(h.server.DB)
+		paymentRepository.Create(&payment)
 
 		bankAccount := model.BankAccount{}
-		h.server.DB.Debug().Where("user_id = ?", claims.ID).First(&bankAccount)
+		bankAccountRepository := repository.NewBankAccountRepository(h.server.DB)
+		bankAccountRepository.FindByUserID(&bankAccount, claims.ID)
 
 		transaction := map[string]any{
 			"payment_type": "bank_transfer",
