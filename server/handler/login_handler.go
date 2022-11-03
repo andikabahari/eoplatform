@@ -40,7 +40,7 @@ func (h *LoginHandler) Login(c echo.Context) error {
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
-		return c.JSON(http.StatusNotFound, echo.Map{
+		return c.JSON(http.StatusBadRequest, echo.Map{
 			"message": "login failure",
 			"error":   "invalid password",
 		})
