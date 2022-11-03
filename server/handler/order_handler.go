@@ -50,7 +50,7 @@ func (h *OrderHandler) CreateOrder(c echo.Context) error {
 	claims := userToken.Claims.(*helper.JWTCustomClaims)
 
 	if claims.Role != "customer" {
-		return c.JSON(http.StatusBadRequest, echo.Map{
+		return c.JSON(http.StatusUnauthorized, echo.Map{
 			"message": "create order failure",
 			"error":   "unauthorized",
 		})
