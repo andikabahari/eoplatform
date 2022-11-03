@@ -163,7 +163,7 @@ func (h *OrderHandler) AcceptOrCompleteOrder(c echo.Context) error {
 		bankAccount := model.BankAccount{}
 		h.server.DB.Debug().Where("user_id = ?", claims.ID).First(&bankAccount)
 
-		helper.ChargeOrder(map[string]any{
+		transaction := map[string]any{
 			"payment_type": "bank_transfer",
 			"transaction_details": map[string]any{
 				"order_id":     order.ID,
@@ -174,11 +174,14 @@ func (h *OrderHandler) AcceptOrCompleteOrder(c echo.Context) error {
 				"va_number": bankAccount.VANumber,
 			},
 			"customer_details": map[string]any{
-				"phone":   order.Phone,
-				"email":   order.Email,
-				"address": order.Address,
+				"first_name": order.FirstName,
+				"last_name":  order.LastName,
+				"phone":      order.Phone,
+				"email":      order.Email,
+				"address":    order.Address,
 			},
-		})
+		}
+		helper.ChargeOrder(transaction)
 	}
 	if segment == "complete" && order.IsAccepted {
 		order.IsCompleted = true
@@ -245,20 +248,18 @@ func (h *OrderHandler) PaymentStatus(c echo.Context) error {
 		})
 	}
 
-	switch req.Status {
-	case "settlement":
-	case "capture":
-		payment.Status = "success"
-		paymentRepository.Create(&payment)
-	case "deny":
-	case "cancel":
-	case "expire":
-		payment.Status = "fail"
+	if req.Status == "settlement" || req.Status == "capture" {
+		req.Status = "success"
+	}
+	if req.Status == "deny" || req.Status == "cancel" || req.Status == "expire" {
+		req.Status = "fail"
+
 		order := model.Order{}
 		orderRepository := repository.NewOrderRepository(h.server.DB)
 		orderRepository.FindOnly(&order, req.OrderID)
 		orderRepository.Delete(&order)
 	}
+	paymentRepository.Update(&payment, &req)
 
 	return c.JSON(http.StatusOK, echo.Map{
 		"message": "payment successful",
