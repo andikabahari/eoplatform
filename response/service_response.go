@@ -8,7 +8,6 @@ type ServiceResponse struct {
 	Cost        float64       `json:"cost"`
 	Phone       string        `json:"phone"`
 	Email       string        `json:"email"`
-	IsPublished bool          `json:"is_published"`
 	Description string        `json:"description"`
 	User        *UserResponse `json:"user,omitempty"`
 }

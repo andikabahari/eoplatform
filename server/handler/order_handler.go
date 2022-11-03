@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/andikabahari/eoplatform/helper"
 	"github.com/andikabahari/eoplatform/model"
@@ -68,6 +69,11 @@ func (h *OrderHandler) CreateOrder(c echo.Context) error {
 		})
 	}
 
+	dateOfEvent, err := time.Parse("2006-01-02", req.DateOfEvent)
+	if err != nil {
+		return err
+	}
+
 	serviceRepository := repository.NewServiceRepository(h.server.DB)
 	services := make([]model.Service, 0)
 
@@ -96,7 +102,7 @@ func (h *OrderHandler) CreateOrder(c echo.Context) error {
 	order := model.Order{}
 	order.IsAccepted = false
 	order.IsCompleted = false
-	order.DateOfEvent = req.DateOfEvent
+	order.DateOfEvent = dateOfEvent
 	order.FirstName = req.FirstName
 	order.LastName = req.LastName
 	order.Phone = req.Phone
