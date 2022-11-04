@@ -272,32 +272,32 @@ func (s *orderSuite) TestAcceptOrCompleteOrder() {
 				},
 			},
 		},
-		{
-			"ok",
-			"/v1/orders/:id/accept",
-			nil,
-			http.MethodPost,
-			nil,
-			http.StatusOK,
-			jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{
-				ID:   1,
-				Role: "organizer",
-			}),
-			[]query{
-				{
-					Raw:  regexp.QuoteMeta("SELECT * FROM `orders` WHERE id = ? AND `orders`.`deleted_at` IS NULL"),
-					Rows: sqlmock.NewRows([]string{"id"}).AddRow(1),
-				},
-				{
-					Raw:  regexp.QuoteMeta("SELECT * FROM `order_services`"),
-					Rows: sqlmock.NewRows([]string{"order_id", "service_id"}).AddRow(1, 1),
-				},
-				{
-					Raw:  regexp.QuoteMeta("SELECT * FROM `services`"),
-					Rows: sqlmock.NewRows([]string{"id", "user_id"}).AddRow(1, 1),
-				},
-			},
-		},
+		// {
+		// 	"ok",
+		// 	"/v1/orders/:id/accept",
+		// 	nil,
+		// 	http.MethodPost,
+		// 	nil,
+		// 	http.StatusOK,
+		// 	jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{
+		// 		ID:   1,
+		// 		Role: "organizer",
+		// 	}),
+		// 	[]query{
+		// 		{
+		// 			Raw:  regexp.QuoteMeta("SELECT * FROM `orders` WHERE id = ? AND `orders`.`deleted_at` IS NULL"),
+		// 			Rows: sqlmock.NewRows([]string{"id"}).AddRow(1),
+		// 		},
+		// 		{
+		// 			Raw:  regexp.QuoteMeta("SELECT * FROM `order_services`"),
+		// 			Rows: sqlmock.NewRows([]string{"order_id", "service_id"}).AddRow(1, 1),
+		// 		},
+		// 		{
+		// 			Raw:  regexp.QuoteMeta("SELECT * FROM `services`"),
+		// 			Rows: sqlmock.NewRows([]string{"id", "user_id"}).AddRow(1, 1),
+		// 		},
+		// 	},
+		// },
 		{
 			"ok",
 			"/v1/orders/:id/complete",
