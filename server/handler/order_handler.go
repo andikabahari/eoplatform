@@ -39,9 +39,17 @@ func (h *OrderHandler) GetOrders(c echo.Context) error {
 		orderRepository.GetOrdersForOrganizer(&orders, claims.ID)
 	}
 
+	payments := make([]model.Payment, len(orders))
+	paymentRepository := repository.NewPaymentRepository(h.server.DB)
+	for _, order := range orders {
+		payment := model.Payment{}
+		paymentRepository.FindOnlyByOrderID(&payment, order.ID)
+		payments = append(payments, payment)
+	}
+
 	return c.JSON(http.StatusOK, echo.Map{
 		"message": "fetch orders successful",
-		"data":    response.NewOrdersResponse(orders),
+		"data":    response.NewOrdersWithPaymentStatusResponse(orders, payments),
 	})
 }
 

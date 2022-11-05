@@ -9,6 +9,7 @@ import (
 type PaymentRepository interface {
 	Create(payment *model.Payment)
 	Update(payment *model.Payment, req *request.MidtransTransactionNotificationRequest)
+	GetOnlyByOrderID(payments *model.Payment, orderID any)
 	FindOnlyByOrderID(payment *model.Payment, orderID any)
 }
 
@@ -28,6 +29,10 @@ func (r *paymentRepository) Update(payment *model.Payment, req *request.Midtrans
 	payment.Status = req.Status
 
 	r.db.Debug().Omit("Order").Save(payment)
+}
+
+func (r *paymentRepository) GetOnlyByOrderID(payments *[]model.Payment, orderID any) {
+	r.db.Debug().Where("order_id = ?", orderID).Find(payments)
 }
 
 func (r *paymentRepository) FindOnlyByOrderID(payment *model.Payment, orderID any) {
