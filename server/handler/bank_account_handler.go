@@ -2,7 +2,6 @@ package handler
 
 import (
 	"net/http"
-	"strconv"
 
 	"github.com/andikabahari/eoplatform/helper"
 	"github.com/andikabahari/eoplatform/model"
@@ -33,13 +32,13 @@ func (h *BankAccountHandler) GetBankAccounts(c echo.Context) error {
 		})
 	}
 
-	bankAccounts := make([]model.BankAccount, 0)
+	bankAccount := model.BankAccount{}
 	bankAccountRepository := repository.NewBankAccountRepository(h.server.DB)
-	bankAccountRepository.Get(&bankAccounts, claims.ID)
+	bankAccountRepository.FindByUserID(&bankAccount, claims.ID)
 
 	return c.JSON(http.StatusOK, echo.Map{
 		"message": "fetch bank account successful",
-		"data":    response.NewBankAccountsResponse(bankAccounts),
+		"data":    response.NewBankAccountResponse(bankAccount),
 	})
 }
 
@@ -114,41 +113,5 @@ func (h *BankAccountHandler) UpdateBankAccount(c echo.Context) error {
 	return c.JSON(http.StatusOK, echo.Map{
 		"message": "update bank account successful",
 		"data":    response.NewBankAccountResponse(bankAccount),
-	})
-}
-
-func (h *BankAccountHandler) DeleteBankAccount(c echo.Context) error {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
-	if err != nil {
-		return err
-	}
-
-	bankAccount := model.BankAccount{}
-	bankAccountRepository := repository.NewBankAccountRepository(h.server.DB)
-	bankAccountRepository.Find(&bankAccount, uint(id))
-
-	if bankAccount.ID == 0 {
-		return c.JSON(http.StatusNotFound, echo.Map{
-			"error": "bank account not found",
-		})
-	}
-
-	userToken := c.Get("user").(*jwt.Token)
-	claims := userToken.Claims.(*helper.JWTCustomClaims)
-
-	if bankAccount.UserID != claims.ID {
-		return c.JSON(http.StatusUnauthorized, echo.Map{
-			"error": "unauthorized",
-		})
-	}
-
-	bankAccountRepository.Delete(&bankAccount)
-
-	return c.JSON(http.StatusOK, echo.Map{
-		"data": echo.Map{
-			"kind":    "bank account",
-			"id":      id,
-			"deleted": true,
-		},
 	})
 }
