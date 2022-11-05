@@ -2,28 +2,12 @@ package testhelper
 
 import (
 	"database/sql"
-	"database/sql/driver"
 	"log"
-	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
-
-type AnyTime struct{}
-
-func (a AnyTime) Match(v driver.Value) bool {
-	_, ok := v.(time.Time)
-	return ok
-}
-
-type AnyString struct{}
-
-func (a AnyString) Match(v driver.Value) bool {
-	_, ok := v.(string)
-	return ok
-}
 
 func Init(conn *sql.DB) *gorm.DB {
 	db, err := gorm.Open(mysql.New(mysql.Config{

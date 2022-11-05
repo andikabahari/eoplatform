@@ -126,15 +126,15 @@ func (h *ServiceHandler) UpdateService(c echo.Context) error {
 		})
 	}
 
-	count := 0
-	query := "SELECT COUNT(1) FROM order_services WHERE service_id = ?"
-	h.server.DB.Raw(query, service.ID).Scan(&count)
-	if count > 0 {
-		return c.JSON(http.StatusForbidden, echo.Map{
-			"message": "update service failure",
-			"error":   "forbidden",
-		})
-	}
+	// count := 0
+	// query := "SELECT COUNT(1) FROM order_services WHERE service_id = ?"
+	// h.server.DB.Raw(query, service.ID).Scan(&count)
+	// if count > 0 {
+	// 	return c.JSON(http.StatusForbidden, echo.Map{
+	// 		"message": "update service failure",
+	// 		"error":   "forbidden",
+	// 	})
+	// }
 
 	serviceRepository.Update(&service, &req)
 
