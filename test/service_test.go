@@ -21,17 +21,6 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-type query struct {
-	Raw  string
-	Args []driver.Value
-	Rows *sqlmock.Rows
-}
-
-type pathParam struct {
-	Names  []string
-	Values []string
-}
-
 type serviceSuite struct {
 	suite.Suite
 	mock    sqlmock.Sqlmock
