@@ -5,7 +5,8 @@ steps:
     args:
       - -c
       - |
-        go test -v ./...
+        go install github.com/jstemmer/go-junit-report/v2@latest
+        2>&1 go test -v ./test | /go/bin/go-junit-report -set-exit-code -iocopy -out ${SHORT_SHA}_test_log.xml
 
   # Docker build
   - name: 'gcr.io/cloud-builders/docker'
@@ -27,6 +28,13 @@ steps:
         '--platform=managed',
         '--allow-unauthenticated',
       ]
+
+# Save test logs
+artifacts:
+  objects:
+    location: gs://$_BUCKET_NAME/logs/tests
+    paths:
+      - ${SHORT_SHA}_test_log.xml
 
 # Store image
 images:
