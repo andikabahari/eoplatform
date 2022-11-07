@@ -19,11 +19,23 @@ import (
 )
 
 type OrderHandler struct {
-	server *s.Server
+	server                *s.Server
+	orderRepository       *repository.OrderRepository
+	paymentRepository     *repository.PaymentRepository
+	userRepository        *repository.UserRepository
+	serviceRepository     *repository.ServiceRepository
+	bankAccountRepository *repository.BankAccountRepository
 }
 
 func NewOrderHandler(server *s.Server) *OrderHandler {
-	return &OrderHandler{server}
+	return &OrderHandler{
+		server,
+		repository.NewOrderRepository(server.DB),
+		repository.NewPaymentRepository(server.DB),
+		repository.NewUserRepository(server.DB),
+		repository.NewServiceRepository(server.DB),
+		repository.NewBankAccountRepository(server.DB),
+	}
 }
 
 func (h *OrderHandler) GetOrders(c echo.Context) error {
@@ -31,19 +43,17 @@ func (h *OrderHandler) GetOrders(c echo.Context) error {
 	claims := userToken.Claims.(*helper.JWTCustomClaims)
 
 	orders := make([]model.Order, 0)
-	orderRepository := repository.NewOrderRepository(h.server.DB)
 	if claims.Role == "customer" {
-		orderRepository.GetOrdersForCustomer(&orders, claims.ID)
+		h.orderRepository.GetOrdersForCustomer(&orders, claims.ID)
 	}
 	if claims.Role == "organizer" {
-		orderRepository.GetOrdersForOrganizer(&orders, claims.ID)
+		h.orderRepository.GetOrdersForOrganizer(&orders, claims.ID)
 	}
 
 	payments := make([]model.Payment, len(orders))
-	paymentRepository := repository.NewPaymentRepository(h.server.DB)
 	for i, order := range orders {
 		payment := model.Payment{}
-		paymentRepository.FindOnlyByOrderID(&payment, order.ID)
+		h.paymentRepository.FindOnlyByOrderID(&payment, order.ID)
 		payments[i] = payment
 	}
 
@@ -82,13 +92,12 @@ func (h *OrderHandler) CreateOrder(c echo.Context) error {
 		return err
 	}
 
-	serviceRepository := repository.NewServiceRepository(h.server.DB)
 	services := make([]model.Service, 0)
 
 	first := model.Service{}
 	for i, id := range req.ServiceIDs {
 		service := model.Service{}
-		serviceRepository.Find(&service, fmt.Sprintf("%d", id))
+		h.serviceRepository.Find(&service, fmt.Sprintf("%d", id))
 
 		if i == 0 {
 			first = service
@@ -104,8 +113,7 @@ func (h *OrderHandler) CreateOrder(c echo.Context) error {
 	}
 
 	user := model.User{}
-	userRepository := repository.NewUserRepository(h.server.DB)
-	userRepository.Find(&user, claims.ID)
+	h.userRepository.Find(&user, claims.ID)
 
 	order := model.Order{}
 	order.IsAccepted = false
@@ -120,8 +128,7 @@ func (h *OrderHandler) CreateOrder(c echo.Context) error {
 	order.UserID = claims.ID
 	order.Services = services
 
-	orderRepository := repository.NewOrderRepository(h.server.DB)
-	orderRepository.Create(&order)
+	h.orderRepository.Create(&order)
 
 	order.User = user
 
@@ -133,8 +140,7 @@ func (h *OrderHandler) CreateOrder(c echo.Context) error {
 
 func (h *OrderHandler) AcceptOrCompleteOrder(c echo.Context) error {
 	order := model.Order{}
-	orderRepository := repository.NewOrderRepository(h.server.DB)
-	orderRepository.Find(&order, c.Param("id"))
+	h.orderRepository.Find(&order, c.Param("id"))
 
 	if order.ID == 0 {
 		return c.JSON(http.StatusNotFound, echo.Map{
@@ -166,12 +172,10 @@ func (h *OrderHandler) AcceptOrCompleteOrder(c echo.Context) error {
 		payment.OrderID = order.ID
 		payment.Amount = totalCost
 		payment.Status = "pending"
-		paymentRepository := repository.NewPaymentRepository(h.server.DB)
-		paymentRepository.Create(&payment)
+		h.paymentRepository.Create(&payment)
 
 		bankAccount := model.BankAccount{}
-		bankAccountRepository := repository.NewBankAccountRepository(h.server.DB)
-		bankAccountRepository.FindByUserID(&bankAccount, claims.ID)
+		h.bankAccountRepository.FindByUserID(&bankAccount, claims.ID)
 
 		transaction := map[string]any{
 			"payment_type": "bank_transfer",
@@ -207,8 +211,7 @@ func (h *OrderHandler) AcceptOrCompleteOrder(c echo.Context) error {
 
 func (h *OrderHandler) CancelOrder(c echo.Context) error {
 	order := model.Order{}
-	orderRepository := repository.NewOrderRepository(h.server.DB)
-	orderRepository.Find(&order, c.Param("id"))
+	h.orderRepository.Find(&order, c.Param("id"))
 
 	if order.ID == 0 {
 		return c.JSON(http.StatusNotFound, echo.Map{
@@ -227,7 +230,7 @@ func (h *OrderHandler) CancelOrder(c echo.Context) error {
 		})
 	}
 
-	orderRepository.Delete(&order)
+	h.orderRepository.Delete(&order)
 
 	return c.JSON(http.StatusOK, echo.Map{
 		"message": "cancel order successful",
@@ -250,8 +253,7 @@ func (h *OrderHandler) PaymentStatus(c echo.Context) error {
 	orderID := strings.Split(req.OrderID, "-")[1]
 
 	payment := model.Payment{}
-	paymentRepository := repository.NewPaymentRepository(h.server.DB)
-	paymentRepository.FindOnlyByOrderID(&payment, orderID)
+	h.paymentRepository.FindOnlyByOrderID(&payment, orderID)
 
 	if payment.OrderID == 0 {
 		return c.JSON(http.StatusNotFound, echo.Map{
@@ -267,11 +269,10 @@ func (h *OrderHandler) PaymentStatus(c echo.Context) error {
 		req.Status = "fail"
 
 		order := model.Order{}
-		orderRepository := repository.NewOrderRepository(h.server.DB)
-		orderRepository.FindOnly(&order, orderID)
-		orderRepository.Delete(&order)
+		h.orderRepository.FindOnly(&order, orderID)
+		h.orderRepository.Delete(&order)
 	}
-	paymentRepository.Update(&payment, &req)
+	h.paymentRepository.Update(&payment, &req)
 
 	return c.JSON(http.StatusOK, echo.Map{
 		"message": "payment successful",

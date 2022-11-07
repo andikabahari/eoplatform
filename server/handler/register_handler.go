@@ -13,11 +13,15 @@ import (
 )
 
 type RegisterHandler struct {
-	server *s.Server
+	server         *s.Server
+	userRepository *repository.UserRepository
 }
 
 func NewRegisterHandler(server *s.Server) *RegisterHandler {
-	return &RegisterHandler{server}
+	return &RegisterHandler{
+		server,
+		repository.NewUserRepository(server.DB),
+	}
 }
 
 func (h *RegisterHandler) Register(c echo.Context) error {
@@ -39,10 +43,8 @@ func (h *RegisterHandler) Register(c echo.Context) error {
 		return err
 	}
 
-	userRepository := repository.NewUserRepository(h.server.DB)
-
 	existingUser := model.User{}
-	userRepository.FindByUsername(&existingUser, req.Username)
+	h.userRepository.FindByUsername(&existingUser, req.Username)
 	if existingUser.ID > 0 {
 		return c.JSON(http.StatusBadRequest, echo.Map{
 			"message": "registration failure",
@@ -56,7 +58,7 @@ func (h *RegisterHandler) Register(c echo.Context) error {
 	user.Password = string(hashedPassword)
 	user.Role = req.Role
 
-	userRepository.Create(&user)
+	h.userRepository.Create(&user)
 
 	return c.JSON(http.StatusOK, echo.Map{
 		"message": "registration successful",

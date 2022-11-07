@@ -15,11 +15,15 @@ import (
 )
 
 type AccountHandler struct {
-	server *s.Server
+	server         *s.Server
+	userRepository *repository.UserRepository
 }
 
 func NewAccountHandler(server *s.Server) *AccountHandler {
-	return &AccountHandler{server}
+	return &AccountHandler{
+		server,
+		repository.NewUserRepository(server.DB),
+	}
 }
 
 func (h *AccountHandler) GetAccount(c echo.Context) error {
@@ -27,8 +31,7 @@ func (h *AccountHandler) GetAccount(c echo.Context) error {
 	claims := userToken.Claims.(*helper.JWTCustomClaims)
 
 	user := model.User{}
-	userRepository := repository.NewUserRepository(h.server.DB)
-	userRepository.Find(&user, claims.ID)
+	h.userRepository.Find(&user, claims.ID)
 
 	if user.ID == 0 {
 		return c.JSON(http.StatusNotFound, echo.Map{
@@ -61,8 +64,7 @@ func (h *AccountHandler) UpdateAccount(c echo.Context) error {
 	claims := userToken.Claims.(*helper.JWTCustomClaims)
 
 	user := model.User{}
-	userRepository := repository.NewUserRepository(h.server.DB)
-	userRepository.Find(&user, claims.ID)
+	h.userRepository.Find(&user, claims.ID)
 
 	if user.ID == 0 {
 		return c.JSON(http.StatusNotFound, echo.Map{
@@ -71,7 +73,7 @@ func (h *AccountHandler) UpdateAccount(c echo.Context) error {
 		})
 	}
 
-	userRepository.Update(&user, &req)
+	h.userRepository.Update(&user, &req)
 
 	return c.JSON(http.StatusOK, echo.Map{
 		"message": "update account successful",
@@ -106,8 +108,7 @@ func (h *AccountHandler) ResetPassword(c echo.Context) error {
 	claims := userToken.Claims.(*helper.JWTCustomClaims)
 
 	user := model.User{}
-	userRepository := repository.NewUserRepository(h.server.DB)
-	userRepository.Find(&user, claims.ID)
+	h.userRepository.Find(&user, claims.ID)
 
 	if user.ID == 0 {
 		return c.JSON(http.StatusNotFound, echo.Map{
@@ -128,7 +129,7 @@ func (h *AccountHandler) ResetPassword(c echo.Context) error {
 		return err
 	}
 
-	userRepository.ResetPassword(&user, string(hashedPassword))
+	h.userRepository.ResetPassword(&user, string(hashedPassword))
 
 	return c.JSON(http.StatusOK, echo.Map{
 		"message": "reset password successful",

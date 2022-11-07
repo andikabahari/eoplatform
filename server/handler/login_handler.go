@@ -13,11 +13,15 @@ import (
 )
 
 type LoginHandler struct {
-	server *s.Server
+	server         *s.Server
+	userRepository *repository.UserRepository
 }
 
 func NewLoginHandler(server *s.Server) *LoginHandler {
-	return &LoginHandler{server}
+	return &LoginHandler{
+		server,
+		repository.NewUserRepository(server.DB),
+	}
 }
 
 func (h *LoginHandler) Login(c echo.Context) error {
@@ -29,8 +33,7 @@ func (h *LoginHandler) Login(c echo.Context) error {
 
 	user := model.User{}
 
-	userRepository := repository.NewUserRepository(h.server.DB)
-	userRepository.FindByUsername(&user, req.Username)
+	h.userRepository.FindByUsername(&user, req.Username)
 
 	if user.ID == 0 {
 		return c.JSON(http.StatusNotFound, echo.Map{

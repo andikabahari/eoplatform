@@ -7,22 +7,22 @@ import (
 	"gorm.io/gorm"
 )
 
-type FeedbackRepository interface {
+type IFeedbackRepository interface {
 	Get(feedbacks *model.Feedback, toUserID string)
 	Create(feedback *model.Feedback)
 	GetFeedbacksCount(fromUserID, toUserID any) int
 	GetOrdersCount(fromUserID, toUserID any) int
 }
 
-type feedbackRepository struct {
+type FeedbackRepository struct {
 	db *gorm.DB
 }
 
-func NewFeedbackRepository(db *gorm.DB) *feedbackRepository {
-	return &feedbackRepository{db}
+func NewFeedbackRepository(db *gorm.DB) *FeedbackRepository {
+	return &FeedbackRepository{db}
 }
 
-func (r *feedbackRepository) Get(feedbacks *[]model.Feedback, toUserID string) {
+func (r *FeedbackRepository) Get(feedbacks *[]model.Feedback, toUserID string) {
 	if toUserID != "" {
 		r.db.Debug().Preload("FromUser").Preload("ToUser").Where("to_user_id = ?", toUserID).Find(feedbacks)
 	} else {
@@ -30,11 +30,11 @@ func (r *feedbackRepository) Get(feedbacks *[]model.Feedback, toUserID string) {
 	}
 }
 
-func (r *feedbackRepository) Create(feedback *model.Feedback) {
+func (r *FeedbackRepository) Create(feedback *model.Feedback) {
 	r.db.Debug().Omit("FromUser").Omit("ToUser").Save(feedback)
 }
 
-func (r *feedbackRepository) GetFeedbacksCount(fromUserID, toUserID any) int {
+func (r *FeedbackRepository) GetFeedbacksCount(fromUserID, toUserID any) int {
 	feedbacksCount := 0
 
 	query := "SELECT COUNT(1) FROM feedbacks " +
@@ -48,7 +48,7 @@ func (r *feedbackRepository) GetFeedbacksCount(fromUserID, toUserID any) int {
 	return feedbacksCount
 }
 
-func (r *feedbackRepository) GetOrdersCount(fromUserID, toUserID any) int {
+func (r *FeedbackRepository) GetOrdersCount(fromUserID, toUserID any) int {
 	ordersCount := 0
 
 	query := "SELECT COUNT(1) FROM(" +

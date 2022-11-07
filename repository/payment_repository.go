@@ -6,35 +6,35 @@ import (
 	"gorm.io/gorm"
 )
 
-type PaymentRepository interface {
+type IPaymentRepository interface {
 	Create(payment *model.Payment)
 	Update(payment *model.Payment, req *request.MidtransTransactionNotificationRequest)
 	GetOnlyByOrderID(payments *model.Payment, orderID any)
 	FindOnlyByOrderID(payment *model.Payment, orderID any)
 }
 
-type paymentRepository struct {
+type PaymentRepository struct {
 	db *gorm.DB
 }
 
-func NewPaymentRepository(db *gorm.DB) *paymentRepository {
-	return &paymentRepository{db}
+func NewPaymentRepository(db *gorm.DB) *PaymentRepository {
+	return &PaymentRepository{db}
 }
 
-func (r *paymentRepository) Create(payment *model.Payment) {
+func (r *PaymentRepository) Create(payment *model.Payment) {
 	r.db.Debug().Omit("Order").Save(payment)
 }
 
-func (r *paymentRepository) Update(payment *model.Payment, req *request.MidtransTransactionNotificationRequest) {
+func (r *PaymentRepository) Update(payment *model.Payment, req *request.MidtransTransactionNotificationRequest) {
 	payment.Status = req.Status
 
 	r.db.Debug().Omit("Order").Save(payment)
 }
 
-func (r *paymentRepository) GetOnlyByOrderID(payments *[]model.Payment, orderID any) {
+func (r *PaymentRepository) GetOnlyByOrderID(payments *[]model.Payment, orderID any) {
 	r.db.Debug().Where("order_id = ?", orderID).Find(payments)
 }
 
-func (r *paymentRepository) FindOnlyByOrderID(payment *model.Payment, orderID any) {
+func (r *PaymentRepository) FindOnlyByOrderID(payment *model.Payment, orderID any) {
 	r.db.Debug().Where("order_id = ?", orderID).Find(payment)
 }

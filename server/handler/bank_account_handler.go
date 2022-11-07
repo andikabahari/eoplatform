@@ -14,11 +14,15 @@ import (
 )
 
 type BankAccountHandler struct {
-	server *s.Server
+	server                *s.Server
+	bankAccountRepository *repository.BankAccountRepository
 }
 
 func NewBankAccountHandler(server *s.Server) *BankAccountHandler {
-	return &BankAccountHandler{server}
+	return &BankAccountHandler{
+		server,
+		repository.NewBankAccountRepository(server.DB),
+	}
 }
 
 func (h *BankAccountHandler) GetBankAccounts(c echo.Context) error {
@@ -33,8 +37,7 @@ func (h *BankAccountHandler) GetBankAccounts(c echo.Context) error {
 	}
 
 	bankAccount := model.BankAccount{}
-	bankAccountRepository := repository.NewBankAccountRepository(h.server.DB)
-	bankAccountRepository.FindByUserID(&bankAccount, claims.ID)
+	h.bankAccountRepository.FindByUserID(&bankAccount, claims.ID)
 
 	return c.JSON(http.StatusOK, echo.Map{
 		"message": "fetch bank account successful",
@@ -71,8 +74,7 @@ func (h *BankAccountHandler) CreateBankAccount(c echo.Context) error {
 	bankAccount.VANumber = req.VANumber
 	bankAccount.UserID = claims.ID
 
-	bankAccountRepository := repository.NewBankAccountRepository(h.server.DB)
-	bankAccountRepository.Create(&bankAccount)
+	h.bankAccountRepository.Create(&bankAccount)
 
 	return c.JSON(http.StatusOK, echo.Map{
 		"message": "create bank account successful",
@@ -98,8 +100,7 @@ func (h *BankAccountHandler) UpdateBankAccount(c echo.Context) error {
 	claims := userToken.Claims.(*helper.JWTCustomClaims)
 
 	bankAccount := model.BankAccount{}
-	bankAccountRepository := repository.NewBankAccountRepository(h.server.DB)
-	bankAccountRepository.FindByUserID(&bankAccount, claims.ID)
+	h.bankAccountRepository.FindByUserID(&bankAccount, claims.ID)
 
 	if bankAccount.ID == 0 {
 		return c.JSON(http.StatusNotFound, echo.Map{
@@ -108,7 +109,7 @@ func (h *BankAccountHandler) UpdateBankAccount(c echo.Context) error {
 		})
 	}
 
-	bankAccountRepository.Update(&bankAccount, &req)
+	h.bankAccountRepository.Update(&bankAccount, &req)
 
 	return c.JSON(http.StatusOK, echo.Map{
 		"message": "update bank account successful",

@@ -15,17 +15,22 @@ import (
 )
 
 type FeedbackHandler struct {
-	server *s.Server
+	server             *s.Server
+	feedbackRepository *repository.FeedbackRepository
+	userRepository     *repository.UserRepository
 }
 
 func NewFeedbackHandler(server *s.Server) *FeedbackHandler {
-	return &FeedbackHandler{server}
+	return &FeedbackHandler{
+		server,
+		repository.NewFeedbackRepository(server.DB),
+		repository.NewUserRepository(server.DB),
+	}
 }
 
 func (h *FeedbackHandler) GetFeedbacks(c echo.Context) error {
 	feedbacks := make([]model.Feedback, 0)
-	feedbackpository := repository.NewFeedbackRepository(h.server.DB)
-	feedbackpository.Get(&feedbacks, c.QueryParam("to_user_id"))
+	h.feedbackRepository.Get(&feedbacks, c.QueryParam("to_user_id"))
 
 	return c.JSON(http.StatusOK, echo.Map{
 		"message": "fetch feedbacks successful",
@@ -57,9 +62,8 @@ func (h *FeedbackHandler) CreateFeedback(c echo.Context) error {
 		})
 	}
 
-	feedbackRepository := repository.NewFeedbackRepository(h.server.DB)
-	feedbacksCount := feedbackRepository.GetFeedbacksCount(claims.ID, req.ToUserID)
-	ordersCount := feedbackRepository.GetOrdersCount(claims.ID, req.ToUserID)
+	feedbacksCount := h.feedbackRepository.GetFeedbacksCount(claims.ID, req.ToUserID)
+	ordersCount := h.feedbackRepository.GetOrdersCount(claims.ID, req.ToUserID)
 
 	if feedbacksCount >= ordersCount {
 		return c.JSON(http.StatusForbidden, echo.Map{
@@ -85,11 +89,10 @@ func (h *FeedbackHandler) CreateFeedback(c echo.Context) error {
 		feedback.Negative = math.Abs(float64(score))
 	}
 
-	feedbackRepository.Create(&feedback)
+	h.feedbackRepository.Create(&feedback)
 
-	userRepository := repository.NewUserRepository(h.server.DB)
-	userRepository.Find(&feedback.FromUser, claims.ID)
-	userRepository.Find(&feedback.ToUser, req.ToUserID)
+	h.userRepository.Find(&feedback.FromUser, claims.ID)
+	h.userRepository.Find(&feedback.ToUser, req.ToUserID)
 
 	return c.JSON(http.StatusOK, echo.Map{
 		"message": "create feedback successful",
