@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"math"
 	"net/http"
 
 	"github.com/andikabahari/eoplatform/helper"
@@ -81,7 +82,7 @@ func (h *FeedbackHandler) CreateFeedback(c echo.Context) error {
 	if score >= 0 {
 		feedback.Positive = float64(score)
 	} else {
-		feedback.Negative = float64(score)
+		feedback.Negative = math.Abs(float64(score))
 	}
 
 	feedbackRepository.Create(&feedback)
