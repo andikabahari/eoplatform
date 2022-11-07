@@ -48,3 +48,82 @@ Event organizer platform for MSIB mini porject.
 | ├── server     | Server objects--including handlers & routes |
 | ├── terraform  | Infrastructure configurations               |
 | └── test       | Test cases                                  |
+
+## Terraform Vars Example
+
+```
+project = "project_id"
+region  = "asia-southeast2"
+zone    = "asia-southeast2-a"
+
+env_vars = [
+  {
+    name : "APP_ENV",
+    value : "production",
+  },
+  {
+    name : "HTTP_PORT",
+    value : "8000",
+  },
+  {
+    name : "AUTH_SECRET",
+    value : "ssssshhhhhhhhhh",
+  },
+  {
+    name : "AUTH_COST",
+    value : "10",
+  },
+  {
+    name : "AUTH_EXP_HOURS",
+    value : "1",
+  },
+  {
+    name : "DB_DRIVER",
+    value : "mysql",
+  },
+  {
+    name : "DB_USER",
+    value : "root",
+  },
+  {
+    name : "DB_PASS",
+    value : "root",
+  },
+  {
+    name : "DB_NAME",
+    value : "eoplatform",
+  },
+  {
+    name : "DB_HOST",
+    value : "localhost",
+  },
+  {
+    name : "DB_PORT",
+    value : "3306",
+  },
+  {
+    name : "SMTP_HOST",
+    value : "smtp.gmail.com",
+  },
+  {
+    name : "SMTP_PORT",
+    value : "587",
+  },
+  {
+    name : "EMAIL_ADDRESS",
+    value : "email_or_username",
+  },
+  {
+    name : "EMAIL_PASSWORD",
+    value : "password",
+  },
+  {
+    name : "MIDTRANS_BASE_URL",
+    value : "https://api.sandbox.midtrans.com",
+  },
+  {
+    name : "MIDTRANS_SERVER_KEY",
+    value : "server_key",
+  },
+]
+```
