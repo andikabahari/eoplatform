@@ -45,6 +45,7 @@ func (s *registerSuite) TestRegister() {
 		Method       string
 		Body         *request.CreateUserRequest
 		ExpectedCode int
+		Queries      []query
 	}{
 		{
 			"bad request",
@@ -52,6 +53,25 @@ func (s *registerSuite) TestRegister() {
 			http.MethodPost,
 			nil,
 			http.StatusBadRequest,
+			nil,
+		},
+		{
+			"bad request",
+			"/v1/register",
+			http.MethodPost,
+			&request.CreateUserRequest{
+				Name:     "Organizer",
+				Username: "organizer",
+				Password: "password",
+				Role:     "organizer",
+			},
+			http.StatusBadRequest,
+			[]query{
+				{
+					Raw:  regexp.QuoteMeta("SELECT * FROM `users`"),
+					Rows: sqlmock.NewRows([]string{"id"}).AddRow(1),
+				},
+			},
 		},
 		{
 			"ok",
@@ -64,13 +84,20 @@ func (s *registerSuite) TestRegister() {
 				Role:     "organizer",
 			},
 			http.StatusOK,
+			[]query{
+				{
+					Raw:  regexp.QuoteMeta("SELECT * FROM `users`"),
+					Rows: sqlmock.NewRows(nil),
+				},
+			},
 		},
 	}
 
 	for _, testCase := range testCases {
 		s.T().Run(testCase.Name, func(t *testing.T) {
-			query := regexp.QuoteMeta("SELECT * FROM `users` WHERE username = ? AND `users`.`deleted_at` IS NULL ORDER BY `users`.`id` LIMIT 1")
-			s.mock.ExpectQuery(query).WillReturnRows(s.mock.NewRows(nil))
+			for _, query := range testCase.Queries {
+				s.mock.ExpectQuery(query.Raw).WillReturnRows(query.Rows)
+			}
 
 			bodyReader := new(bytes.Reader)
 			if testCase.Body != nil {

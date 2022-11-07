@@ -41,10 +41,10 @@ func (h *OrderHandler) GetOrders(c echo.Context) error {
 
 	payments := make([]model.Payment, len(orders))
 	paymentRepository := repository.NewPaymentRepository(h.server.DB)
-	for _, order := range orders {
+	for i, order := range orders {
 		payment := model.Payment{}
 		paymentRepository.FindOnlyByOrderID(&payment, order.ID)
-		payments = append(payments, payment)
+		payments[i] = payment
 	}
 
 	return c.JSON(http.StatusOK, echo.Map{

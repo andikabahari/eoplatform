@@ -62,7 +62,12 @@ func (s *orderSuite) TestGetOrders() {
 				ID:   1,
 				Role: "customer",
 			}),
-			nil,
+			[]query{
+				{
+					Raw:  regexp.QuoteMeta("SELECT * FROM `orders` WHERE user_id = ? AND `orders`.`deleted_at` IS NULL"),
+					Rows: sqlmock.NewRows([]string{"id"}).AddRow(1),
+				},
+			},
 		},
 		{
 			"ok",
