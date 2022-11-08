@@ -16,7 +16,7 @@ import (
 
 type AccountHandler struct {
 	server         *s.Server
-	userRepository *repository.UserRepository
+	userRepository repository.UserRepository
 }
 
 func NewAccountHandler(server *s.Server) *AccountHandler {

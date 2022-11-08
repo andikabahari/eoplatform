@@ -14,7 +14,7 @@ import (
 type feedbackRepositorySuite struct {
 	suite.Suite
 	mock       sqlmock.Sqlmock
-	repository *FeedbackRepository
+	repository FeedbackRepository
 }
 
 func (s *feedbackRepositorySuite) SetupSuite() {

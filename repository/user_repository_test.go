@@ -15,7 +15,7 @@ import (
 type userRepositorySuite struct {
 	suite.Suite
 	mock       sqlmock.Sqlmock
-	repository *UserRepository
+	repository UserRepository
 }
 
 func (s *userRepositorySuite) SetupSuite() {

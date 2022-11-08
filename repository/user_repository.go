@@ -6,7 +6,7 @@ import (
 	"gorm.io/gorm"
 )
 
-type IUserRepository interface {
+type UserRepository interface {
 	Find(user *model.User, id uint)
 	FindByUsername(user *model.User, username string)
 	Create(user *model.User)
@@ -14,33 +14,33 @@ type IUserRepository interface {
 	ResetPassword(user *model.User, password string)
 }
 
-type UserRepository struct {
+type userRepository struct {
 	db *gorm.DB
 }
 
-func NewUserRepository(db *gorm.DB) *UserRepository {
-	return &UserRepository{db}
+func NewUserRepository(db *gorm.DB) UserRepository {
+	return &userRepository{db}
 }
 
-func (r *UserRepository) Find(user *model.User, id uint) {
+func (r *userRepository) Find(user *model.User, id uint) {
 	r.db.Debug().Where("id = ?", id).First(user)
 }
 
-func (r *UserRepository) FindByUsername(user *model.User, username string) {
+func (r *userRepository) FindByUsername(user *model.User, username string) {
 	r.db.Debug().Where("username = ?", username).First(user)
 }
 
-func (r *UserRepository) Create(user *model.User) {
+func (r *userRepository) Create(user *model.User) {
 	r.db.Debug().Save(user)
 }
 
-func (r *UserRepository) Update(user *model.User, req *request.UpdateUserRequest) {
+func (r *userRepository) Update(user *model.User, req *request.UpdateUserRequest) {
 	user.Name = req.Name
 
 	r.db.Debug().Save(user)
 }
 
-func (r *UserRepository) ResetPassword(user *model.User, password string) {
+func (r *userRepository) ResetPassword(user *model.User, password string) {
 	user.Password = password
 
 	r.db.Debug().Save(user)

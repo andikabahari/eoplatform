@@ -15,7 +15,7 @@ import (
 
 type BankAccountHandler struct {
 	server                *s.Server
-	bankAccountRepository *repository.BankAccountRepository
+	bankAccountRepository repository.BankAccountRepository
 }
 
 func NewBankAccountHandler(server *s.Server) *BankAccountHandler {

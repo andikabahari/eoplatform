@@ -15,7 +15,7 @@ import (
 
 type ServiceHandler struct {
 	server            *s.Server
-	serviceRepository *repository.ServiceRepository
+	serviceRepository repository.ServiceRepository
 }
 
 func NewServiceHandler(server *s.Server) *ServiceHandler {

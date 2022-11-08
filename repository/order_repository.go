@@ -7,7 +7,7 @@ import (
 	"gorm.io/gorm"
 )
 
-type IOrderRepository interface {
+type OrderRepository interface {
 	GetOrdersForCustomer(orders *[]model.Order, userID uint)
 	GetOrdersForOrganizer(orders *[]model.Order, userID uint)
 	Find(order *model.Order, id string)
@@ -16,19 +16,19 @@ type IOrderRepository interface {
 	Delete(order *model.Order)
 }
 
-type OrderRepository struct {
+type orderRepository struct {
 	db *gorm.DB
 }
 
-func NewOrderRepository(db *gorm.DB) *OrderRepository {
-	return &OrderRepository{db}
+func NewOrderRepository(db *gorm.DB) OrderRepository {
+	return &orderRepository{db}
 }
 
-func (r *OrderRepository) GetOrdersForCustomer(orders *[]model.Order, userID uint) {
+func (r *orderRepository) GetOrdersForCustomer(orders *[]model.Order, userID uint) {
 	r.db.Debug().Preload("User").Preload("Services").Where("user_id = ?", userID).Find(orders)
 }
 
-func (r *OrderRepository) GetOrdersForOrganizer(orders *[]model.Order, userID uint) {
+func (r *orderRepository) GetOrdersForOrganizer(orders *[]model.Order, userID uint) {
 	query := "SELECT DISTINCT o.id FROM orders o " +
 		"JOIN users u ON u.id=o.user_id " +
 		"JOIN order_services os ON os.order_id=o.id " +
@@ -41,18 +41,18 @@ func (r *OrderRepository) GetOrdersForOrganizer(orders *[]model.Order, userID ui
 	)).Find(orders)
 }
 
-func (r *OrderRepository) Create(order *model.Order) {
+func (r *orderRepository) Create(order *model.Order) {
 	r.db.Debug().Omit("Services.*").Save(order)
 }
 
-func (r *OrderRepository) Find(order *model.Order, id string) {
+func (r *orderRepository) Find(order *model.Order, id string) {
 	r.db.Debug().Preload("User").Preload("Services").Where("id = ?", id).Find(order)
 }
 
-func (r *OrderRepository) FindOnly(order *model.Order, id any) {
+func (r *orderRepository) FindOnly(order *model.Order, id any) {
 	r.db.Debug().Where("id = ?", id).Find(order)
 }
 
-func (r *OrderRepository) Delete(order *model.Order) {
+func (r *orderRepository) Delete(order *model.Order) {
 	r.db.Debug().Delete(order)
 }

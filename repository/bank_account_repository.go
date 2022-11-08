@@ -6,7 +6,7 @@ import (
 	"gorm.io/gorm"
 )
 
-type IBankAccountRepository interface {
+type BankAccountRepository interface {
 	Get(bankAccounts *[]model.BankAccount, userID uint)
 	Find(bankAccount *model.BankAccount, id uint)
 	FindByUserID(bankAccount *model.BankAccount, userID uint)
@@ -15,37 +15,37 @@ type IBankAccountRepository interface {
 	Delete(bankAccount *model.BankAccount)
 }
 
-type BankAccountRepository struct {
+type bankAccountRepository struct {
 	db *gorm.DB
 }
 
-func NewBankAccountRepository(db *gorm.DB) *BankAccountRepository {
-	return &BankAccountRepository{db}
+func NewBankAccountRepository(db *gorm.DB) BankAccountRepository {
+	return &bankAccountRepository{db}
 }
 
-func (r *BankAccountRepository) Get(bankAccounts *[]model.BankAccount, userID uint) {
+func (r *bankAccountRepository) Get(bankAccounts *[]model.BankAccount, userID uint) {
 	r.db.Debug().Where("user_id = ?", userID).Find(bankAccounts)
 }
 
-func (r *BankAccountRepository) FindByUserID(bankAccount *model.BankAccount, userID uint) {
+func (r *bankAccountRepository) FindByUserID(bankAccount *model.BankAccount, userID uint) {
 	r.db.Debug().Where("user_id = ?", userID).Find(bankAccount)
 }
 
-func (r *BankAccountRepository) Find(bankAccount *model.BankAccount, id uint) {
+func (r *bankAccountRepository) Find(bankAccount *model.BankAccount, id uint) {
 	r.db.Debug().Where("id = ?", id).Find(bankAccount)
 }
 
-func (r *BankAccountRepository) Create(bankAccount *model.BankAccount) {
+func (r *bankAccountRepository) Create(bankAccount *model.BankAccount) {
 	r.db.Debug().Omit("User").Save(bankAccount)
 }
 
-func (r *BankAccountRepository) Update(bankAccount *model.BankAccount, req *request.UpdateBankAccountRequest) {
+func (r *bankAccountRepository) Update(bankAccount *model.BankAccount, req *request.UpdateBankAccountRequest) {
 	bankAccount.Bank = req.Bank
 	bankAccount.VANumber = req.VANumber
 
 	r.db.Debug().Omit("User").Save(bankAccount)
 }
 
-func (r *BankAccountRepository) Delete(bankAccount *model.BankAccount) {
+func (r *bankAccountRepository) Delete(bankAccount *model.BankAccount) {
 	r.db.Debug().Delete(bankAccount)
 }

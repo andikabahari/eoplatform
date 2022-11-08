@@ -8,7 +8,7 @@ import (
 	"gorm.io/gorm"
 )
 
-type IServiceRepository interface {
+type ServiceRepository interface {
 	Get(services *[]model.Service, keyword string)
 	Find(service *model.Service, id string)
 	Create(service *model.Service)
@@ -16,15 +16,15 @@ type IServiceRepository interface {
 	Delete(service *model.Service)
 }
 
-type ServiceRepository struct {
+type serviceRepository struct {
 	db *gorm.DB
 }
 
-func NewServiceRepository(db *gorm.DB) *ServiceRepository {
-	return &ServiceRepository{db}
+func NewServiceRepository(db *gorm.DB) ServiceRepository {
+	return &serviceRepository{db}
 }
 
-func (r *ServiceRepository) Get(services *[]model.Service, keyword string) {
+func (r *serviceRepository) Get(services *[]model.Service, keyword string) {
 	if keyword != "" {
 		keyword = fmt.Sprintf("%%%s%%", keyword)
 		r.db.Debug().Preload("User").Where("name LIKE ? OR description LIKE ?", keyword, keyword).Find(services)
@@ -33,15 +33,15 @@ func (r *ServiceRepository) Get(services *[]model.Service, keyword string) {
 	}
 }
 
-func (r *ServiceRepository) Find(service *model.Service, id string) {
+func (r *serviceRepository) Find(service *model.Service, id string) {
 	r.db.Debug().Preload("User").Where("id = ?", id).Find(service)
 }
 
-func (r *ServiceRepository) Create(service *model.Service) {
+func (r *serviceRepository) Create(service *model.Service) {
 	r.db.Debug().Save(service)
 }
 
-func (r *ServiceRepository) Update(service *model.Service, req *request.UpdateServiceRequest) {
+func (r *serviceRepository) Update(service *model.Service, req *request.UpdateServiceRequest) {
 	service.Name = req.Name
 	service.Cost = req.Cost
 	service.Phone = req.Phone
@@ -51,6 +51,6 @@ func (r *ServiceRepository) Update(service *model.Service, req *request.UpdateSe
 	r.db.Debug().Omit("User").Save(service)
 }
 
-func (r *ServiceRepository) Delete(service *model.Service) {
+func (r *serviceRepository) Delete(service *model.Service) {
 	r.db.Debug().Delete(service)
 }

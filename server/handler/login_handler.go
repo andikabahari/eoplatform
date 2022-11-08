@@ -14,7 +14,7 @@ import (
 
 type LoginHandler struct {
 	server         *s.Server
-	userRepository *repository.UserRepository
+	userRepository repository.UserRepository
 }
 
 func NewLoginHandler(server *s.Server) *LoginHandler {

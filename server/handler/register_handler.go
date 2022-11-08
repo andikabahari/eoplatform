@@ -14,7 +14,7 @@ import (
 
 type RegisterHandler struct {
 	server         *s.Server
-	userRepository *repository.UserRepository
+	userRepository repository.UserRepository
 }
 
 func NewRegisterHandler(server *s.Server) *RegisterHandler {

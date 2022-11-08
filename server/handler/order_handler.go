@@ -20,11 +20,11 @@ import (
 
 type OrderHandler struct {
 	server                *s.Server
-	orderRepository       *repository.OrderRepository
-	paymentRepository     *repository.PaymentRepository
-	userRepository        *repository.UserRepository
-	serviceRepository     *repository.ServiceRepository
-	bankAccountRepository *repository.BankAccountRepository
+	orderRepository       repository.OrderRepository
+	paymentRepository     repository.PaymentRepository
+	userRepository        repository.UserRepository
+	serviceRepository     repository.ServiceRepository
+	bankAccountRepository repository.BankAccountRepository
 }
 
 func NewOrderHandler(server *s.Server) *OrderHandler {

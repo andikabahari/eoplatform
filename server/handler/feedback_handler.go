@@ -16,8 +16,8 @@ import (
 
 type FeedbackHandler struct {
 	server             *s.Server
-	feedbackRepository *repository.FeedbackRepository
-	userRepository     *repository.UserRepository
+	feedbackRepository repository.FeedbackRepository
+	userRepository     repository.UserRepository
 }
 
 func NewFeedbackHandler(server *s.Server) *FeedbackHandler {
