@@ -1,56 +1,60 @@
-package test
+package handler
 
 import (
 	"bytes"
-	"database/sql"
-	"database/sql/driver"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"regexp"
 	"testing"
 
-	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/andikabahari/eoplatform/helper"
+	"github.com/andikabahari/eoplatform/model"
+	"github.com/andikabahari/eoplatform/repository/mock_repository"
 	"github.com/andikabahari/eoplatform/request"
 	"github.com/andikabahari/eoplatform/server"
-	"github.com/andikabahari/eoplatform/server/handler"
-	"github.com/andikabahari/eoplatform/test/testhelper"
+	"github.com/andikabahari/eoplatform/testhelper"
 	"github.com/golang-jwt/jwt"
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/suite"
+	"gorm.io/gorm"
 )
 
-type serviceSuite struct {
+type serviceHandlerSuite struct {
 	suite.Suite
-	mock    sqlmock.Sqlmock
+
+	ctrl              *gomock.Controller
+	serviceRepository *mock_repository.MockServiceRepository
+
 	server  *server.Server
-	handler *handler.ServiceHandler
+	handler *ServiceHandler
 }
 
-func (s *serviceSuite) SetupSuite() {
+func (s *serviceHandlerSuite) SetupSuite() {
 	os.Setenv("APP_ENV", "production")
 
-	var conn *sql.DB
-	conn, s.mock = testhelper.Mock()
+	s.ctrl = gomock.NewController(s.T())
+	s.serviceRepository = mock_repository.NewMockServiceRepository(s.ctrl)
+
+	conn, _ := testhelper.Mock()
 	s.server = testhelper.NewServer(conn)
-	s.handler = handler.NewServiceHandler(s.server)
+	s.handler = NewServiceHandler(s.server, s.serviceRepository)
 }
 
-func TestServiceSuite(t *testing.T) {
-	suite.Run(t, new(serviceSuite))
+func TestServiceHandlerSuite(t *testing.T) {
+	suite.Run(t, new(serviceHandlerSuite))
 }
 
-func (s *serviceSuite) TestGetServices() {
+func (s *serviceHandlerSuite) TestGetServices() {
 	testCases := []struct {
 		Name         string
 		Endpoint     string
-		PathParam    *pathParam
+		PathParam    *testhelper.PathParam
 		Method       string
 		Body         any
 		ExpectedCode int
+		ExpectedFunc func()
 		Token        *jwt.Token
-		Queries      []query
 	}{
 		{
 			"ok",
@@ -59,16 +63,19 @@ func (s *serviceSuite) TestGetServices() {
 			http.MethodGet,
 			nil,
 			http.StatusOK,
-			nil,
+			func() {
+				s.serviceRepository.EXPECT().Get(
+					gomock.Eq(&[]model.Service{}),
+					gomock.Eq(""),
+				)
+			},
 			nil,
 		},
 	}
 
 	for _, testCase := range testCases {
 		s.T().Run(testCase.Name, func(t *testing.T) {
-			for _, query := range testCase.Queries {
-				s.mock.ExpectQuery(query.Raw).WillReturnRows(query.Rows)
-			}
+			testCase.ExpectedFunc()
 
 			bodyReader := new(bytes.Reader)
 			if testCase.Body != nil {
@@ -93,60 +100,58 @@ func (s *serviceSuite) TestGetServices() {
 	}
 }
 
-func (s *serviceSuite) TestFindService() {
+func (s *serviceHandlerSuite) TestFindService() {
 	testCases := []struct {
 		Name         string
 		Endpoint     string
-		PathParam    *pathParam
+		PathParam    *testhelper.PathParam
 		Method       string
 		Body         any
 		ExpectedCode int
+		ExpectedFunc func()
 		Token        *jwt.Token
-		Queries      []query
 	}{
 		{
 			"not found",
 			"/v1/services",
-			&pathParam{
+			&testhelper.PathParam{
 				Names:  []string{"id"},
 				Values: []string{"1"},
 			},
 			http.MethodGet,
 			nil,
 			http.StatusNotFound,
-			nil,
-			[]query{
-				{
-					Raw:  regexp.QuoteMeta("SELECT * FROM `services` WHERE id = ? AND `services`.`deleted_at` IS NULL"),
-					Rows: sqlmock.NewRows(nil),
-				},
+			func() {
+				s.serviceRepository.EXPECT().Find(
+					gomock.Eq(&model.Service{}),
+					gomock.Eq("1"),
+				)
 			},
+			nil,
 		},
 		{
 			"ok",
 			"/v1/services",
-			&pathParam{
+			&testhelper.PathParam{
 				Names:  []string{"id"},
 				Values: []string{"1"},
 			},
 			http.MethodGet,
 			nil,
 			http.StatusOK,
-			nil,
-			[]query{
-				{
-					Raw:  regexp.QuoteMeta("SELECT * FROM `services` WHERE id = ? AND `services`.`deleted_at` IS NULL"),
-					Rows: sqlmock.NewRows([]string{"id"}).AddRow(1),
-				},
+			func() {
+				s.serviceRepository.EXPECT().Find(
+					gomock.Eq(&model.Service{}),
+					gomock.Eq("1"),
+				).SetArg(0, model.Service{Model: gorm.Model{ID: 1}})
 			},
+			nil,
 		},
 	}
 
 	for _, testCase := range testCases {
 		s.T().Run(testCase.Name, func(t *testing.T) {
-			for _, query := range testCase.Queries {
-				s.mock.ExpectQuery(query.Raw).WithArgs(query.Args...).WillReturnRows(query.Rows)
-			}
+			testCase.ExpectedFunc()
 
 			bodyReader := new(bytes.Reader)
 			if testCase.Body != nil {
@@ -171,16 +176,16 @@ func (s *serviceSuite) TestFindService() {
 	}
 }
 
-func (s *serviceSuite) TestCreateService() {
+func (s *serviceHandlerSuite) TestCreateService() {
 	testCases := []struct {
 		Name         string
 		Endpoint     string
-		PathParam    *pathParam
+		PathParam    *testhelper.PathParam
 		Method       string
 		Body         *request.CreateServiceRequest
 		ExpectedCode int
+		ExpectedFunc func()
 		Token        *jwt.Token
-		Queries      []query
 	}{
 		{
 			"unauthorized",
@@ -189,8 +194,8 @@ func (s *serviceSuite) TestCreateService() {
 			http.MethodPost,
 			nil,
 			http.StatusUnauthorized,
+			func() {},
 			jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{}),
-			nil,
 		},
 		{
 			"bad request",
@@ -199,11 +204,11 @@ func (s *serviceSuite) TestCreateService() {
 			http.MethodPost,
 			&request.CreateServiceRequest{},
 			http.StatusBadRequest,
+			func() {},
 			jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{
 				ID:   1,
 				Role: "organizer",
 			}),
-			nil,
 		},
 		{
 			"ok",
@@ -220,19 +225,19 @@ func (s *serviceSuite) TestCreateService() {
 				},
 			},
 			http.StatusOK,
+			func() {
+				s.serviceRepository.EXPECT().Create(gomock.Any())
+			},
 			jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{
 				ID:   1,
 				Role: "organizer",
 			}),
-			nil,
 		},
 	}
 
 	for _, testCase := range testCases {
 		s.T().Run(testCase.Name, func(t *testing.T) {
-			for _, query := range testCase.Queries {
-				s.mock.ExpectQuery(query.Raw).WithArgs(query.Args...).WillReturnRows(query.Rows)
-			}
+			testCase.ExpectedFunc()
 
 			bodyReader := new(bytes.Reader)
 			if testCase.Body != nil {
@@ -257,34 +262,34 @@ func (s *serviceSuite) TestCreateService() {
 	}
 }
 
-func (s *serviceSuite) TestUpdateService() {
+func (s *serviceHandlerSuite) TestUpdateService() {
 	testCases := []struct {
 		Name         string
 		Endpoint     string
-		PathParam    *pathParam
+		PathParam    *testhelper.PathParam
 		Method       string
 		Body         *request.UpdateServiceRequest
 		ExpectedCode int
+		ExpectedFunc func()
 		Token        *jwt.Token
-		Queries      []query
 	}{
 		{
 			"bad request",
 			"/v1/services/:id",
-			&pathParam{
+			&testhelper.PathParam{
 				Names:  []string{"id"},
 				Values: []string{"1"},
 			},
 			http.MethodPost,
 			nil,
 			http.StatusBadRequest,
-			nil,
+			func() {},
 			nil,
 		},
 		{
 			"not found",
 			"/v1/services/:id",
-			&pathParam{
+			&testhelper.PathParam{
 				Names:  []string{"id"},
 				Values: []string{"1"},
 			},
@@ -299,13 +304,18 @@ func (s *serviceSuite) TestUpdateService() {
 				},
 			},
 			http.StatusNotFound,
-			nil,
+			func() {
+				s.serviceRepository.EXPECT().Find(
+					gomock.Eq(&model.Service{}),
+					gomock.Eq("1"),
+				)
+			},
 			nil,
 		},
 		{
 			"unauthorized",
 			"/v1/services/:id",
-			&pathParam{
+			&testhelper.PathParam{
 				Names:  []string{"id"},
 				Values: []string{"1"},
 			},
@@ -320,19 +330,18 @@ func (s *serviceSuite) TestUpdateService() {
 				},
 			},
 			http.StatusUnauthorized,
-			jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{ID: 1}),
-			[]query{
-				{
-					Raw:  regexp.QuoteMeta("SELECT * FROM `services` WHERE id = ? AND `services`.`deleted_at` IS NULL"),
-					Args: []driver.Value{"1"},
-					Rows: sqlmock.NewRows([]string{"id", "user_id"}).AddRow(1, 2),
-				},
+			func() {
+				s.serviceRepository.EXPECT().Find(
+					gomock.Eq(&model.Service{}),
+					gomock.Eq("1"),
+				).SetArg(0, model.Service{Model: gorm.Model{ID: 1}})
 			},
+			jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{ID: 1}),
 		},
 		{
 			"ok",
 			"/v1/services/:id",
-			&pathParam{
+			&testhelper.PathParam{
 				Names:  []string{"id"},
 				Values: []string{"1"},
 			},
@@ -347,22 +356,21 @@ func (s *serviceSuite) TestUpdateService() {
 				},
 			},
 			http.StatusOK,
-			jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{ID: 2}),
-			[]query{
-				{
-					Raw:  regexp.QuoteMeta("SELECT * FROM `services` WHERE id = ? AND `services`.`deleted_at` IS NULL"),
-					Args: []driver.Value{"1"},
-					Rows: sqlmock.NewRows([]string{"id", "user_id"}).AddRow(1, 2),
-				},
+			func() {
+				s.serviceRepository.EXPECT().Find(
+					gomock.Eq(&model.Service{}),
+					gomock.Eq("1"),
+				).SetArg(0, model.Service{Model: gorm.Model{ID: 1}, UserID: 2})
+
+				s.serviceRepository.EXPECT().Update(gomock.Any(), gomock.Any())
 			},
+			jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{ID: 2}),
 		},
 	}
 
 	for _, testCase := range testCases {
 		s.T().Run(testCase.Name, func(t *testing.T) {
-			for _, query := range testCase.Queries {
-				s.mock.ExpectQuery(query.Raw).WithArgs(query.Args...).WillReturnRows(query.Rows)
-			}
+			testCase.ExpectedFunc()
 
 			bodyReader := new(bytes.Reader)
 			if testCase.Body != nil {
@@ -387,75 +395,78 @@ func (s *serviceSuite) TestUpdateService() {
 	}
 }
 
-func (s *serviceSuite) TestDeleteService() {
+func (s *serviceHandlerSuite) TestDeleteService() {
 	testCases := []struct {
 		Name         string
 		Endpoint     string
-		PathParam    *pathParam
+		PathParam    *testhelper.PathParam
 		Method       string
 		Body         *request.UpdateServiceRequest
 		ExpectedCode int
+		ExpectedFunc func()
 		Token        *jwt.Token
-		Queries      []query
 	}{
 		{
 			"not found",
 			"/v1/services/:id",
-			&pathParam{
+			&testhelper.PathParam{
 				Names:  []string{"id"},
 				Values: []string{"1"},
 			},
 			http.MethodDelete,
 			nil,
 			http.StatusNotFound,
-			nil,
+			func() {
+				s.serviceRepository.EXPECT().Find(
+					gomock.Eq(&model.Service{}),
+					gomock.Eq("1"),
+				)
+			},
 			nil,
 		},
 		{
 			"unauthorized",
 			"/v1/services/:id",
-			&pathParam{
+			&testhelper.PathParam{
 				Names:  []string{"id"},
 				Values: []string{"1"},
 			},
 			http.MethodDelete,
 			nil,
 			http.StatusUnauthorized,
-			jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{ID: 1}),
-			[]query{
-				{
-					Raw:  regexp.QuoteMeta("SELECT * FROM `services` WHERE id = ? AND `services`.`deleted_at` IS NULL"),
-					Args: []driver.Value{"1"},
-					Rows: sqlmock.NewRows([]string{"id", "user_id"}).AddRow(1, 2),
-				},
+			func() {
+				s.serviceRepository.EXPECT().Find(
+					gomock.Eq(&model.Service{}),
+					gomock.Eq("1"),
+				).SetArg(0, model.Service{Model: gorm.Model{ID: 1}, UserID: 2})
 			},
+			jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{ID: 1}),
 		},
 		{
 			"ok",
 			"/v1/services/:id",
-			&pathParam{
+			&testhelper.PathParam{
 				Names:  []string{"id"},
 				Values: []string{"1"},
 			},
 			http.MethodDelete,
 			nil,
 			http.StatusOK,
-			jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{ID: 1}),
-			[]query{
-				{
-					Raw:  regexp.QuoteMeta("SELECT * FROM `services` WHERE id = ? AND `services`.`deleted_at` IS NULL"),
-					Args: []driver.Value{"1"},
-					Rows: sqlmock.NewRows([]string{"id", "user_id"}).AddRow(1, 1),
-				},
+			func() {
+				s.serviceRepository.EXPECT().Find(
+					gomock.Eq(&model.Service{}),
+					gomock.Eq("1"),
+				).SetArg(0, model.Service{Model: gorm.Model{ID: 1}, UserID: 1})
+
+				s.serviceRepository.EXPECT().Delete(gomock.Any())
 			},
+			jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{ID: 1}),
 		},
 	}
 
 	for _, testCase := range testCases {
 		s.T().Run(testCase.Name, func(t *testing.T) {
-			for _, query := range testCase.Queries {
-				s.mock.ExpectQuery(query.Raw).WithArgs(query.Args...).WillReturnRows(query.Rows)
-			}
+			testCase.ExpectedFunc()
 
 			bodyReader := new(bytes.Reader)
 			if testCase.Body != nil {

@@ -1,51 +1,59 @@
-package test
+package handler
 
 import (
 	"bytes"
-	"database/sql"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
 
-	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/andikabahari/eoplatform/helper"
+	"github.com/andikabahari/eoplatform/model"
+	"github.com/andikabahari/eoplatform/repository/mock_repository"
 	"github.com/andikabahari/eoplatform/request"
 	"github.com/andikabahari/eoplatform/server"
-	"github.com/andikabahari/eoplatform/server/handler"
-	"github.com/andikabahari/eoplatform/test/testhelper"
+	"github.com/andikabahari/eoplatform/testhelper"
 	"github.com/golang-jwt/jwt"
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/suite"
 )
 
-type feedbackSuite struct {
+type feedbackHandlerSuite struct {
 	suite.Suite
-	mock    sqlmock.Sqlmock
+
+	ctrl               *gomock.Controller
+	feedbackRepository *mock_repository.MockFeedbackRepository
+	userRepository     *mock_repository.MockUserRepository
+
 	server  *server.Server
-	handler *handler.FeedbackHandler
+	handler *FeedbackHandler
 }
 
-func (s *feedbackSuite) SetupSuite() {
+func (s *feedbackHandlerSuite) SetupSuite() {
 	os.Setenv("APP_ENV", "production")
 
-	var conn *sql.DB
-	conn, s.mock = testhelper.Mock()
+	s.ctrl = gomock.NewController(s.T())
+	s.feedbackRepository = mock_repository.NewMockFeedbackRepository(s.ctrl)
+	s.userRepository = mock_repository.NewMockUserRepository(s.ctrl)
+
+	conn, _ := testhelper.Mock()
 	s.server = testhelper.NewServer(conn)
-	s.handler = handler.NewFeedbackHandler(s.server)
+	s.handler = NewFeedbackHandler(s.server, s.feedbackRepository, s.userRepository)
 }
 
-func TestFeedbackSuite(t *testing.T) {
-	suite.Run(t, new(feedbackSuite))
+func TestFeedbackHandlerSuite(t *testing.T) {
+	suite.Run(t, new(feedbackHandlerSuite))
 }
 
-func (s *feedbackSuite) TestGetFeedbacks() {
+func (s *feedbackHandlerSuite) TestGetFeedbacks() {
 	testCases := []struct {
 		Name         string
 		Endpoint     string
 		Method       string
 		Body         any
 		ExpectedCode int
+		ExpectedFunc func()
 		Token        *jwt.Token
 	}{
 		{
@@ -54,12 +62,20 @@ func (s *feedbackSuite) TestGetFeedbacks() {
 			http.MethodGet,
 			nil,
 			http.StatusOK,
+			func() {
+				s.feedbackRepository.EXPECT().Get(
+					gomock.Eq(&[]model.Feedback{}),
+					gomock.Eq(""),
+				)
+			},
 			nil,
 		},
 	}
 
 	for _, testCase := range testCases {
 		s.T().Run(testCase.Name, func(t *testing.T) {
+			testCase.ExpectedFunc()
+
 			bodyReader := new(bytes.Reader)
 			if testCase.Body != nil {
 				body, err := json.Marshal(testCase.Body)
@@ -79,20 +95,15 @@ func (s *feedbackSuite) TestGetFeedbacks() {
 	}
 }
 
-func (s *feedbackSuite) TestCreateFeedback() {
-	type query struct {
-		Raw  string
-		Rows *sqlmock.Rows
-	}
-
+func (s *feedbackHandlerSuite) TestCreateFeedback() {
 	testCases := []struct {
 		Name         string
 		Endpoint     string
 		Method       string
 		Body         *request.CreateFeedbackRequest
 		ExpectedCode int
+		ExpectedFunc func()
 		Token        *jwt.Token
-		Queries      []query
 	}{
 		{
 			"unauthorized",
@@ -100,11 +111,8 @@ func (s *feedbackSuite) TestCreateFeedback() {
 			http.MethodPost,
 			nil,
 			http.StatusUnauthorized,
-			jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{
-				ID:   1,
-				Role: "organizer",
-			}),
-			nil,
+			func() {},
+			jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{ID: 1, Role: "organizer"}),
 		},
 		{
 			"bad request",
@@ -112,11 +120,8 @@ func (s *feedbackSuite) TestCreateFeedback() {
 			http.MethodPost,
 			nil,
 			http.StatusBadRequest,
-			jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{
-				ID:   1,
-				Role: "customer",
-			}),
-			nil,
+			func() {},
+			jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{ID: 1, Role: "customer"}),
 		},
 		{
 			"forbidden",
@@ -128,11 +133,18 @@ func (s *feedbackSuite) TestCreateFeedback() {
 				ToUserID:    1,
 			},
 			http.StatusForbidden,
-			jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{
-				ID:   1,
-				Role: "customer",
-			}),
-			nil,
+			func() {
+				s.feedbackRepository.EXPECT().GetFeedbacksCount(
+					gomock.Eq(uint(1)),
+					gomock.Eq(uint(1)),
+				)
+
+				s.feedbackRepository.EXPECT().GetOrdersCount(
+					gomock.Eq(uint(1)),
+					gomock.Eq(uint(1)),
+				)
+			},
+			jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{ID: 1, Role: "customer"}),
 		},
 		// {
 		// 	"ok",
@@ -144,20 +156,8 @@ func (s *feedbackSuite) TestCreateFeedback() {
 		// 		ToUserID:    1,
 		// 	},
 		// 	http.StatusOK,
-		// 	jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{
-		// 		ID:   1,
-		// 		Role: "customer",
-		// 	}),
-		// 	[]query{
-		// 		{
-		// 			Raw:  regexp.QuoteMeta("SELECT COUNT(1) FROM feedbacks WHERE from_user_id=? AND to_user_id=?"),
-		// 			Rows: sqlmock.NewRows([]string{"count"}).AddRow(0),
-		// 		},
-		// 		{
-		// 			Raw:  regexp.QuoteMeta("SELECT COUNT(1) FROM(SELECT DISTINCT o.id FROM orders o JOIN order_services os ON os.order_id=o.id JOIN services s ON s.id=os.service_id WHERE o.user_id=? AND s.user_id=? AND is_completed>0) AS t"),
-		// 			Rows: sqlmock.NewRows([]string{"count"}).AddRow(1),
-		// 		},
-		// 	},
+		// 	func() {},
+		// 	jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{ID: 1, Role: "customer"}),
 		// },
 		// {
 		// 	"ok",
@@ -169,28 +169,14 @@ func (s *feedbackSuite) TestCreateFeedback() {
 		// 		ToUserID:    1,
 		// 	},
 		// 	http.StatusOK,
-		// 	jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{
-		// 		ID:   1,
-		// 		Role: "customer",
-		// 	}),
-		// 	[]query{
-		// 		{
-		// 			Raw:  regexp.QuoteMeta("SELECT COUNT(1) FROM feedbacks WHERE from_user_id=? AND to_user_id=?"),
-		// 			Rows: sqlmock.NewRows([]string{"count"}).AddRow(0),
-		// 		},
-		// 		{
-		// 			Raw:  regexp.QuoteMeta("SELECT COUNT(1) FROM(SELECT DISTINCT o.id FROM orders o JOIN order_services os ON os.order_id=o.id JOIN services s ON s.id=os.service_id WHERE o.user_id=? AND s.user_id=? AND is_completed>0) AS t"),
-		// 			Rows: sqlmock.NewRows([]string{"count"}).AddRow(1),
-		// 		},
-		// 	},
+		// 	func() {},
+		// 	jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{ID: 1, Role: "customer"}),
 		// },
 	}
 
 	for _, testCase := range testCases {
 		s.T().Run(testCase.Name, func(t *testing.T) {
-			for _, query := range testCase.Queries {
-				s.mock.ExpectQuery(query.Raw).WillReturnRows(query.Rows)
-			}
+			testCase.ExpectedFunc()
 
 			bodyReader := new(bytes.Reader)
 			if testCase.Body != nil {

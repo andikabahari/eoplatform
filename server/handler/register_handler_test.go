@@ -1,59 +1,68 @@
-package test
+package handler
 
 import (
 	"bytes"
-	"database/sql"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"regexp"
 	"testing"
 
-	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/andikabahari/eoplatform/model"
+	"github.com/andikabahari/eoplatform/repository/mock_repository"
 	"github.com/andikabahari/eoplatform/request"
 	"github.com/andikabahari/eoplatform/server"
-	"github.com/andikabahari/eoplatform/server/handler"
-	"github.com/andikabahari/eoplatform/test/testhelper"
+	"github.com/andikabahari/eoplatform/testhelper"
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/suite"
+	"gorm.io/gorm"
 )
 
-type registerSuite struct {
+type registerHandlerSuite struct {
 	suite.Suite
-	mock    sqlmock.Sqlmock
+
+	ctrl           *gomock.Controller
+	userRepository *mock_repository.MockUserRepository
+
 	server  *server.Server
-	handler *handler.RegisterHandler
+	handler *RegisterHandler
 }
 
-func (s *registerSuite) SetupSuite() {
+func (s *registerHandlerSuite) SetupSuite() {
 	os.Setenv("APP_ENV", "production")
 
-	var conn *sql.DB
-	conn, s.mock = testhelper.Mock()
+	s.ctrl = gomock.NewController(s.T())
+	s.userRepository = mock_repository.NewMockUserRepository(s.ctrl)
+
+	conn, _ := testhelper.Mock()
 	s.server = testhelper.NewServer(conn)
-	s.handler = handler.NewRegisterHandler(s.server)
+	s.handler = NewRegisterHandler(s.server, s.userRepository)
 }
 
-func TestRegisterSuite(t *testing.T) {
-	suite.Run(t, new(registerSuite))
+func (s *registerHandlerSuite) TearDownSuite() {
+	s.ctrl.Finish()
 }
 
-func (s *registerSuite) TestRegister() {
+func TestRegisterHandlerSuite(t *testing.T) {
+	suite.Run(t, new(registerHandlerSuite))
+}
+
+func (s *registerHandlerSuite) TestRegister() {
 	testCases := []struct {
 		Name         string
 		Endpoint     string
 		Method       string
 		Body         *request.CreateUserRequest
+		ExpectedFunc func()
 		ExpectedCode int
-		Queries      []query
 	}{
 		{
 			"bad request",
 			"/v1/register",
 			http.MethodPost,
 			nil,
+			func() {},
 			http.StatusBadRequest,
-			nil,
 		},
 		{
 			"bad request",
@@ -65,13 +74,13 @@ func (s *registerSuite) TestRegister() {
 				Password: "password",
 				Role:     "organizer",
 			},
-			http.StatusBadRequest,
-			[]query{
-				{
-					Raw:  regexp.QuoteMeta("SELECT * FROM `users`"),
-					Rows: sqlmock.NewRows([]string{"id"}).AddRow(1),
-				},
+			func() {
+				s.userRepository.EXPECT().FindByUsername(
+					gomock.Eq(&model.User{}),
+					gomock.Eq("organizer"),
+				).SetArg(0, model.User{Model: gorm.Model{ID: 1}})
 			},
+			http.StatusBadRequest,
 		},
 		{
 			"ok",
@@ -83,21 +92,21 @@ func (s *registerSuite) TestRegister() {
 				Password: "password",
 				Role:     "organizer",
 			},
-			http.StatusOK,
-			[]query{
-				{
-					Raw:  regexp.QuoteMeta("SELECT * FROM `users`"),
-					Rows: sqlmock.NewRows(nil),
-				},
+			func() {
+				s.userRepository.EXPECT().FindByUsername(
+					gomock.Eq(&model.User{}),
+					gomock.Eq("organizer"),
+				)
+
+				s.userRepository.EXPECT().Create(gomock.Any())
 			},
+			http.StatusOK,
 		},
 	}
 
 	for _, testCase := range testCases {
 		s.T().Run(testCase.Name, func(t *testing.T) {
-			for _, query := range testCase.Queries {
-				s.mock.ExpectQuery(query.Raw).WillReturnRows(query.Rows)
-			}
+			testCase.ExpectedFunc()
 
 			bodyReader := new(bytes.Reader)
 			if testCase.Body != nil {
