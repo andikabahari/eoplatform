@@ -18,10 +18,13 @@ type ServiceHandler struct {
 	serviceRepository repository.ServiceRepository
 }
 
-func NewServiceHandler(server *s.Server) *ServiceHandler {
+func NewServiceHandler(
+	server *s.Server,
+	serviceRepository repository.ServiceRepository,
+) *ServiceHandler {
 	return &ServiceHandler{
 		server,
-		repository.NewServiceRepository(server.DB),
+		serviceRepository,
 	}
 }
 

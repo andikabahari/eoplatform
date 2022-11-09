@@ -18,10 +18,13 @@ type BankAccountHandler struct {
 	bankAccountRepository repository.BankAccountRepository
 }
 
-func NewBankAccountHandler(server *s.Server) *BankAccountHandler {
+func NewBankAccountHandler(
+	server *s.Server,
+	bankAccountRepository repository.BankAccountRepository,
+) *BankAccountHandler {
 	return &BankAccountHandler{
 		server,
-		repository.NewBankAccountRepository(server.DB),
+		bankAccountRepository,
 	}
 }
 

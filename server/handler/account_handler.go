@@ -19,10 +19,13 @@ type AccountHandler struct {
 	userRepository repository.UserRepository
 }
 
-func NewAccountHandler(server *s.Server) *AccountHandler {
+func NewAccountHandler(
+	server *s.Server,
+	userRepository repository.UserRepository,
+) *AccountHandler {
 	return &AccountHandler{
 		server,
-		repository.NewUserRepository(server.DB),
+		userRepository,
 	}
 }
 

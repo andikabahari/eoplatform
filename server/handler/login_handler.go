@@ -17,10 +17,13 @@ type LoginHandler struct {
 	userRepository repository.UserRepository
 }
 
-func NewLoginHandler(server *s.Server) *LoginHandler {
+func NewLoginHandler(
+	server *s.Server,
+	userRepository repository.UserRepository,
+) *LoginHandler {
 	return &LoginHandler{
 		server,
-		repository.NewUserRepository(server.DB),
+		userRepository,
 	}
 }
 

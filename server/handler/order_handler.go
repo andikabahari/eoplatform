@@ -27,14 +27,21 @@ type OrderHandler struct {
 	bankAccountRepository repository.BankAccountRepository
 }
 
-func NewOrderHandler(server *s.Server) *OrderHandler {
+func NewOrderHandler(
+	server *s.Server,
+	orderRepository repository.OrderRepository,
+	paymentRepository repository.PaymentRepository,
+	userRepository repository.UserRepository,
+	serviceRepository repository.ServiceRepository,
+	bankAccountRepository repository.BankAccountRepository,
+) *OrderHandler {
 	return &OrderHandler{
 		server,
-		repository.NewOrderRepository(server.DB),
-		repository.NewPaymentRepository(server.DB),
-		repository.NewUserRepository(server.DB),
-		repository.NewServiceRepository(server.DB),
-		repository.NewBankAccountRepository(server.DB),
+		orderRepository,
+		paymentRepository,
+		userRepository,
+		serviceRepository,
+		bankAccountRepository,
 	}
 }
 

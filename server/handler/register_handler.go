@@ -17,10 +17,13 @@ type RegisterHandler struct {
 	userRepository repository.UserRepository
 }
 
-func NewRegisterHandler(server *s.Server) *RegisterHandler {
+func NewRegisterHandler(
+	server *s.Server,
+	userRepository repository.UserRepository,
+) *RegisterHandler {
 	return &RegisterHandler{
 		server,
-		repository.NewUserRepository(server.DB),
+		userRepository,
 	}
 }
 

@@ -20,11 +20,15 @@ type FeedbackHandler struct {
 	userRepository     repository.UserRepository
 }
 
-func NewFeedbackHandler(server *s.Server) *FeedbackHandler {
+func NewFeedbackHandler(
+	server *s.Server,
+	feedbackRepository repository.FeedbackRepository,
+	userRepository repository.UserRepository,
+) *FeedbackHandler {
 	return &FeedbackHandler{
 		server,
-		repository.NewFeedbackRepository(server.DB),
-		repository.NewUserRepository(server.DB),
+		feedbackRepository,
+		userRepository,
 	}
 }
 
