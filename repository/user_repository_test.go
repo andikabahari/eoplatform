@@ -8,7 +8,7 @@ import (
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/andikabahari/eoplatform/model"
 	"github.com/andikabahari/eoplatform/request"
-	"github.com/andikabahari/eoplatform/test/testhelper"
+	"github.com/andikabahari/eoplatform/testhelper"
 	"github.com/stretchr/testify/suite"
 )
 
