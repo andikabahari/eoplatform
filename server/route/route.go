@@ -34,7 +34,8 @@ func Setup(server *s.Server) {
 	registerHandler := handler.NewRegisterHandler(registerUsecase)
 	v1.POST("/register", registerHandler.Register)
 
-	loginHandler := handler.NewLoginHandler(server, userRepository)
+	loginUsecase := usecase.NewLoginUsecase(userRepository)
+	loginHandler := handler.NewLoginHandler(loginUsecase)
 	v1.POST("/login", loginHandler.Login)
 
 	accountV1 := v1.Group("/account")

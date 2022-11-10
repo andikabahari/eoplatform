@@ -8,23 +8,20 @@ import (
 	"os"
 	"testing"
 
-	"github.com/andikabahari/eoplatform/config"
-	"github.com/andikabahari/eoplatform/model"
-	"github.com/andikabahari/eoplatform/repository/mock_repository"
+	"github.com/andikabahari/eoplatform/helper"
 	"github.com/andikabahari/eoplatform/request"
 	"github.com/andikabahari/eoplatform/server"
 	"github.com/andikabahari/eoplatform/testhelper"
+	mu "github.com/andikabahari/eoplatform/usecase/mock_usecase"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/suite"
-	"golang.org/x/crypto/bcrypt"
-	"gorm.io/gorm"
 )
 
 type loginHandlerSuite struct {
 	suite.Suite
 
-	ctrl           *gomock.Controller
-	userRepository *mock_repository.MockUserRepository
+	ctrl    *gomock.Controller
+	usecase *mu.MockLoginUsecase
 
 	server  *server.Server
 	handler *LoginHandler
@@ -34,11 +31,11 @@ func (s *loginHandlerSuite) SetupSuite() {
 	os.Setenv("APP_ENV", "production")
 
 	s.ctrl = gomock.NewController(s.T())
-	s.userRepository = mock_repository.NewMockUserRepository(s.ctrl)
+	s.usecase = mu.NewMockLoginUsecase(s.ctrl)
 
 	conn, _ := testhelper.Mock()
 	s.server = testhelper.NewServer(conn)
-	s.handler = NewLoginHandler(s.server, s.userRepository)
+	s.handler = NewLoginHandler(s.usecase)
 }
 
 func (s *loginHandlerSuite) TearDownSuite() {
@@ -64,28 +61,10 @@ func (s *loginHandlerSuite) TestLogin() {
 			http.MethodPost,
 			nil,
 			func() {
-				s.userRepository.EXPECT().FindByUsername(
-					gomock.Eq(&model.User{}),
-					gomock.Eq(""),
-				)
+				apiError := helper.NewAPIError(http.StatusNotFound, "")
+				s.usecase.EXPECT().Login(gomock.Any(), gomock.Any()).Return(apiError)
 			},
 			http.StatusNotFound,
-		},
-		{
-			"bad request",
-			"/v1/login",
-			http.MethodPost,
-			&request.LoginRequest{
-				Username: "organizer",
-				Password: "password",
-			},
-			func() {
-				s.userRepository.EXPECT().FindByUsername(
-					gomock.Eq(&model.User{}),
-					gomock.Eq("organizer"),
-				).SetArg(0, model.User{Model: gorm.Model{ID: 1}})
-			},
-			http.StatusBadRequest,
 		},
 		{
 			"ok",
@@ -96,14 +75,7 @@ func (s *loginHandlerSuite) TestLogin() {
 				Password: "password",
 			},
 			func() {
-				hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("password"), config.LoadAuthConfig().Cost)
-				s.userRepository.EXPECT().FindByUsername(
-					gomock.Eq(&model.User{}),
-					gomock.Eq("organizer"),
-				).SetArg(0, model.User{
-					Model:    gorm.Model{ID: 1},
-					Password: string(hashedPassword),
-				})
+				s.usecase.EXPECT().Login(gomock.Any(), gomock.Any()).Return(nil)
 			},
 			http.StatusOK,
 		},
