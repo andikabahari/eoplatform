@@ -70,7 +70,8 @@ func Setup(server *s.Server) {
 	v1.POST("/MDDRlkYVFm9QOLK08MDp", orderHandler.PaymentStatus)
 
 	bankAccountV1 := v1.Group("/bank-accounts")
-	bankAccountHandler := handler.NewBankAccountHandler(server, bankAccountRepository)
+	bankAccountUsecase := usecase.NewBankAccountUsecase(bankAccountRepository)
+	bankAccountHandler := handler.NewBankAccountHandler(bankAccountUsecase)
 	bankAccountV1.GET("", bankAccountHandler.GetBankAccounts, auth)
 	bankAccountV1.POST("", bankAccountHandler.CreateBankAccount, auth)
 	bankAccountV1.PUT("", bankAccountHandler.UpdateBankAccount, auth)
