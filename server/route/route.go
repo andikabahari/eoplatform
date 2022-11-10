@@ -39,7 +39,8 @@ func Setup(server *s.Server) {
 	v1.POST("/login", loginHandler.Login)
 
 	accountV1 := v1.Group("/account")
-	accountHandler := handler.NewAccountHandler(server, userRepository)
+	accountUsecase := usecase.NewAccountUsecase(userRepository)
+	accountHandler := handler.NewAccountHandler(accountUsecase)
 	accountV1.GET("", accountHandler.GetAccount, auth)
 	accountV1.PUT("", accountHandler.UpdateAccount, auth)
 	accountV1.PUT("/password", accountHandler.ResetPassword, auth)
