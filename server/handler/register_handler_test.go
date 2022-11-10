@@ -8,21 +8,20 @@ import (
 	"os"
 	"testing"
 
-	"github.com/andikabahari/eoplatform/model"
-	"github.com/andikabahari/eoplatform/repository/mock_repository"
+	"github.com/andikabahari/eoplatform/helper"
 	"github.com/andikabahari/eoplatform/request"
 	"github.com/andikabahari/eoplatform/server"
 	"github.com/andikabahari/eoplatform/testhelper"
+	mu "github.com/andikabahari/eoplatform/usecase/mock_usecase"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/suite"
-	"gorm.io/gorm"
 )
 
 type registerHandlerSuite struct {
 	suite.Suite
 
-	ctrl           *gomock.Controller
-	userRepository *mock_repository.MockUserRepository
+	ctrl    *gomock.Controller
+	usecase *mu.MockRegisterUsecase
 
 	server  *server.Server
 	handler *RegisterHandler
@@ -32,11 +31,11 @@ func (s *registerHandlerSuite) SetupSuite() {
 	os.Setenv("APP_ENV", "production")
 
 	s.ctrl = gomock.NewController(s.T())
-	s.userRepository = mock_repository.NewMockUserRepository(s.ctrl)
+	s.usecase = mu.NewMockRegisterUsecase(s.ctrl)
 
 	conn, _ := testhelper.Mock()
 	s.server = testhelper.NewServer(conn)
-	s.handler = NewRegisterHandler(s.server, s.userRepository)
+	s.handler = NewRegisterHandler(s.usecase)
 }
 
 func (s *registerHandlerSuite) TearDownSuite() {
@@ -75,10 +74,8 @@ func (s *registerHandlerSuite) TestRegister() {
 				Role:     "organizer",
 			},
 			func() {
-				s.userRepository.EXPECT().FindByUsername(
-					gomock.Eq(&model.User{}),
-					gomock.Eq("organizer"),
-				).SetArg(0, model.User{Model: gorm.Model{ID: 1}})
+				apiError := helper.NewAPIError(http.StatusBadRequest, "")
+				s.usecase.EXPECT().Register(gomock.Any(), gomock.Any()).Return(apiError)
 			},
 			http.StatusBadRequest,
 		},
@@ -93,12 +90,7 @@ func (s *registerHandlerSuite) TestRegister() {
 				Role:     "organizer",
 			},
 			func() {
-				s.userRepository.EXPECT().FindByUsername(
-					gomock.Eq(&model.User{}),
-					gomock.Eq("organizer"),
-				)
-
-				s.userRepository.EXPECT().Create(gomock.Any())
+				s.usecase.EXPECT().Register(gomock.Any(), gomock.Any()).Return(nil)
 			},
 			http.StatusOK,
 		},

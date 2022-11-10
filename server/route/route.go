@@ -5,6 +5,7 @@ import (
 	"github.com/andikabahari/eoplatform/repository"
 	s "github.com/andikabahari/eoplatform/server"
 	"github.com/andikabahari/eoplatform/server/handler"
+	"github.com/andikabahari/eoplatform/usecase"
 	"github.com/labstack/echo/v4/middleware"
 )
 
@@ -29,7 +30,8 @@ func Setup(server *s.Server) {
 
 	v1 := server.Echo.Group("/v1")
 
-	registerHandler := handler.NewRegisterHandler(server, userRepository)
+	registerUsecase := usecase.NewRegisterUsecase(userRepository)
+	registerHandler := handler.NewRegisterHandler(registerUsecase)
 	v1.POST("/register", registerHandler.Register)
 
 	loginHandler := handler.NewLoginHandler(server, userRepository)
