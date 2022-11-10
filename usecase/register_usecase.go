@@ -29,7 +29,7 @@ func (u *registerUsecase) Register(user *model.User, req *request.CreateUserRequ
 	authConfig := config.LoadAuthConfig()
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), authConfig.Cost)
 	if err != nil {
-		log.Println("Error:", err.Error())
+		log.Printf("Error: %s", err)
 		return helper.NewAPIError(http.StatusInternalServerError, "internal server error")
 	}
 

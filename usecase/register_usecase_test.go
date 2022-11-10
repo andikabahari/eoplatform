@@ -1,6 +1,7 @@
 package usecase
 
 import (
+	"net/http"
 	"os"
 	"testing"
 
@@ -40,10 +41,10 @@ func TestRegisterUsecaseSuite(t *testing.T) {
 
 func (s *registerUsecaseSuite) TestRegister() {
 	testCases := []struct {
-		Name          string
-		Body          *request.CreateUserRequest
-		ExpectedFunc  func()
-		ExpectedError bool
+		Name         string
+		Body         *request.CreateUserRequest
+		ExpectedFunc func()
+		ExpectedCode int
 	}{
 		{
 			"bad request",
@@ -59,7 +60,7 @@ func (s *registerUsecaseSuite) TestRegister() {
 					gomock.Eq("organizer"),
 				).SetArg(0, model.User{Model: gorm.Model{ID: 1}})
 			},
-			true,
+			http.StatusBadRequest,
 		},
 		{
 			"ok",
@@ -77,15 +78,17 @@ func (s *registerUsecaseSuite) TestRegister() {
 
 				s.userRepository.EXPECT().Create(gomock.Any())
 			},
-			false,
+			http.StatusOK,
 		},
 	}
 
 	for _, testCase := range testCases {
 		s.T().Run(testCase.Name, func(t *testing.T) {
 			testCase.ExpectedFunc()
-			apiError := s.usecase.Register(&model.User{}, testCase.Body)
-			s.Equal(testCase.ExpectedError, apiError != nil)
+			if apiError := s.usecase.Register(&model.User{}, testCase.Body); apiError != nil {
+				code, _ := apiError.APIError()
+				s.Equal(testCase.ExpectedCode, code)
+			}
 		})
 	}
 }
