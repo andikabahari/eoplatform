@@ -5,6 +5,7 @@ import (
 
 	"github.com/andikabahari/eoplatform/model"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type OrderRepository interface {
@@ -14,6 +15,7 @@ type OrderRepository interface {
 	FindOnly(order *model.Order, id any)
 	Create(order *model.Order)
 	Delete(order *model.Order)
+	Save(order *model.Order)
 }
 
 type orderRepository struct {
@@ -55,4 +57,8 @@ func (r *orderRepository) FindOnly(order *model.Order, id any) {
 
 func (r *orderRepository) Delete(order *model.Order) {
 	r.db.Debug().Delete(order)
+}
+
+func (r *orderRepository) Save(order *model.Order) {
+	r.db.Debug().Omit(clause.Associations).Save(order)
 }

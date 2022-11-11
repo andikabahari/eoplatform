@@ -9,22 +9,20 @@ import (
 	"testing"
 
 	"github.com/andikabahari/eoplatform/helper"
-	"github.com/andikabahari/eoplatform/model"
-	"github.com/andikabahari/eoplatform/repository/mock_repository"
 	"github.com/andikabahari/eoplatform/request"
 	"github.com/andikabahari/eoplatform/server"
 	"github.com/andikabahari/eoplatform/testhelper"
+	mu "github.com/andikabahari/eoplatform/usecase/mock_usecase"
 	"github.com/golang-jwt/jwt"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/suite"
-	"gorm.io/gorm"
 )
 
 type serviceHandlerSuite struct {
 	suite.Suite
 
-	ctrl              *gomock.Controller
-	serviceRepository *mock_repository.MockServiceRepository
+	ctrl    *gomock.Controller
+	usecase *mu.MockServiceUsecase
 
 	server  *server.Server
 	handler *ServiceHandler
@@ -34,11 +32,11 @@ func (s *serviceHandlerSuite) SetupSuite() {
 	os.Setenv("APP_ENV", "production")
 
 	s.ctrl = gomock.NewController(s.T())
-	s.serviceRepository = mock_repository.NewMockServiceRepository(s.ctrl)
+	s.usecase = mu.NewMockServiceUsecase(s.ctrl)
 
 	conn, _ := testhelper.Mock()
 	s.server = testhelper.NewServer(conn)
-	s.handler = NewServiceHandler(s.server, s.serviceRepository)
+	s.handler = NewServiceHandler(s.usecase)
 }
 
 func TestServiceHandlerSuite(t *testing.T) {
@@ -64,10 +62,7 @@ func (s *serviceHandlerSuite) TestGetServices() {
 			nil,
 			http.StatusOK,
 			func() {
-				s.serviceRepository.EXPECT().Get(
-					gomock.Eq(&[]model.Service{}),
-					gomock.Eq(""),
-				)
+				s.usecase.EXPECT().GetServices(gomock.Any(), gomock.Any())
 			},
 			nil,
 		},
@@ -122,10 +117,8 @@ func (s *serviceHandlerSuite) TestFindService() {
 			nil,
 			http.StatusNotFound,
 			func() {
-				s.serviceRepository.EXPECT().Find(
-					gomock.Eq(&model.Service{}),
-					gomock.Eq("1"),
-				)
+				apiError := helper.NewAPIError(http.StatusNotFound, "")
+				s.usecase.EXPECT().FindService(gomock.Any(), gomock.Any()).Return(apiError)
 			},
 			nil,
 		},
@@ -140,10 +133,7 @@ func (s *serviceHandlerSuite) TestFindService() {
 			nil,
 			http.StatusOK,
 			func() {
-				s.serviceRepository.EXPECT().Find(
-					gomock.Eq(&model.Service{}),
-					gomock.Eq("1"),
-				).SetArg(0, model.Service{Model: gorm.Model{ID: 1}})
+				s.usecase.EXPECT().FindService(gomock.Any(), gomock.Any()).Return(nil)
 			},
 			nil,
 		},
@@ -226,7 +216,7 @@ func (s *serviceHandlerSuite) TestCreateService() {
 			},
 			http.StatusOK,
 			func() {
-				s.serviceRepository.EXPECT().Create(gomock.Any())
+				s.usecase.EXPECT().CreateService(gomock.Any(), gomock.Any(), gomock.Any())
 			},
 			jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{
 				ID:   1,
@@ -305,38 +295,10 @@ func (s *serviceHandlerSuite) TestUpdateService() {
 			},
 			http.StatusNotFound,
 			func() {
-				s.serviceRepository.EXPECT().Find(
-					gomock.Eq(&model.Service{}),
-					gomock.Eq("1"),
-				)
+				apiError := helper.NewAPIError(http.StatusNotFound, "")
+				s.usecase.EXPECT().UpdateService(gomock.Any(), gomock.Any(), gomock.Any()).Return(apiError)
 			},
 			nil,
-		},
-		{
-			"unauthorized",
-			"/v1/services/:id",
-			&testhelper.PathParam{
-				Names:  []string{"id"},
-				Values: []string{"1"},
-			},
-			http.MethodPost,
-			&request.UpdateServiceRequest{
-				BasicService: request.BasicService{
-					Name:        "Service",
-					Cost:        1000000,
-					Phone:       "08123456789",
-					Email:       "user@example.com",
-					Description: "Lorem ipsum",
-				},
-			},
-			http.StatusUnauthorized,
-			func() {
-				s.serviceRepository.EXPECT().Find(
-					gomock.Eq(&model.Service{}),
-					gomock.Eq("1"),
-				).SetArg(0, model.Service{Model: gorm.Model{ID: 1}})
-			},
-			jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{ID: 1}),
 		},
 		{
 			"ok",
@@ -357,12 +319,7 @@ func (s *serviceHandlerSuite) TestUpdateService() {
 			},
 			http.StatusOK,
 			func() {
-				s.serviceRepository.EXPECT().Find(
-					gomock.Eq(&model.Service{}),
-					gomock.Eq("1"),
-				).SetArg(0, model.Service{Model: gorm.Model{ID: 1}, UserID: 2})
-
-				s.serviceRepository.EXPECT().Update(gomock.Any(), gomock.Any())
+				s.usecase.EXPECT().UpdateService(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
 			jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{ID: 2}),
 		},
@@ -417,30 +374,10 @@ func (s *serviceHandlerSuite) TestDeleteService() {
 			nil,
 			http.StatusNotFound,
 			func() {
-				s.serviceRepository.EXPECT().Find(
-					gomock.Eq(&model.Service{}),
-					gomock.Eq("1"),
-				)
+				apiError := helper.NewAPIError(http.StatusNotFound, "")
+				s.usecase.EXPECT().DeleteService(gomock.Any(), gomock.Any()).Return(apiError)
 			},
 			nil,
-		},
-		{
-			"unauthorized",
-			"/v1/services/:id",
-			&testhelper.PathParam{
-				Names:  []string{"id"},
-				Values: []string{"1"},
-			},
-			http.MethodDelete,
-			nil,
-			http.StatusUnauthorized,
-			func() {
-				s.serviceRepository.EXPECT().Find(
-					gomock.Eq(&model.Service{}),
-					gomock.Eq("1"),
-				).SetArg(0, model.Service{Model: gorm.Model{ID: 1}, UserID: 2})
-			},
-			jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{ID: 1}),
 		},
 		{
 			"ok",
@@ -453,12 +390,7 @@ func (s *serviceHandlerSuite) TestDeleteService() {
 			nil,
 			http.StatusOK,
 			func() {
-				s.serviceRepository.EXPECT().Find(
-					gomock.Eq(&model.Service{}),
-					gomock.Eq("1"),
-				).SetArg(0, model.Service{Model: gorm.Model{ID: 1}, UserID: 1})
-
-				s.serviceRepository.EXPECT().Delete(gomock.Any())
+				s.usecase.EXPECT().DeleteService(gomock.Any(), gomock.Any()).Return(nil)
 			},
 			jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{ID: 1}),
 		},

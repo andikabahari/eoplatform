@@ -9,26 +9,20 @@ import (
 	"testing"
 
 	"github.com/andikabahari/eoplatform/helper"
-	"github.com/andikabahari/eoplatform/model"
-	"github.com/andikabahari/eoplatform/repository/mock_repository"
 	"github.com/andikabahari/eoplatform/request"
 	"github.com/andikabahari/eoplatform/server"
 	"github.com/andikabahari/eoplatform/testhelper"
+	mu "github.com/andikabahari/eoplatform/usecase/mock_usecase"
 	"github.com/golang-jwt/jwt"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/suite"
-	"gorm.io/gorm"
 )
 
 type orderHandlerSuite struct {
 	suite.Suite
 
-	ctrl                  *gomock.Controller
-	orderRepository       *mock_repository.MockOrderRepository
-	paymentRepository     *mock_repository.MockPaymentRepository
-	userRepository        *mock_repository.MockUserRepository
-	serviceRepository     *mock_repository.MockServiceRepository
-	bankAccountRepository *mock_repository.MockBankAccountRepository
+	ctrl    *gomock.Controller
+	usecase *mu.MockOrderUsecase
 
 	server  *server.Server
 	handler *OrderHandler
@@ -38,22 +32,11 @@ func (s *orderHandlerSuite) SetupSuite() {
 	os.Setenv("APP_ENV", "production")
 
 	s.ctrl = gomock.NewController(s.T())
-	s.orderRepository = mock_repository.NewMockOrderRepository(s.ctrl)
-	s.paymentRepository = mock_repository.NewMockPaymentRepository(s.ctrl)
-	s.userRepository = mock_repository.NewMockUserRepository(s.ctrl)
-	s.serviceRepository = mock_repository.NewMockServiceRepository(s.ctrl)
-	s.bankAccountRepository = mock_repository.NewMockBankAccountRepository(s.ctrl)
+	s.usecase = mu.NewMockOrderUsecase(s.ctrl)
 
 	conn, _ := testhelper.Mock()
 	s.server = testhelper.NewServer(conn)
-	s.handler = NewOrderHandler(
-		s.server,
-		s.orderRepository,
-		s.paymentRepository,
-		s.userRepository,
-		s.serviceRepository,
-		s.bankAccountRepository,
-	)
+	s.handler = NewOrderHandler(s.usecase)
 }
 
 func (s *orderHandlerSuite) TearDownSuite() {
@@ -83,32 +66,9 @@ func (s *orderHandlerSuite) TestGetOrders() {
 			nil,
 			http.StatusOK,
 			func() {
-				s.orderRepository.EXPECT().GetOrdersForCustomer(
-					gomock.Eq(&[]model.Order{}),
-					gomock.Eq(uint(1)),
-				).SetArg(0, []model.Order{{Model: gorm.Model{ID: 1}}})
-
-				s.paymentRepository.EXPECT().FindOnlyByOrderID(
-					gomock.Eq(&model.Payment{}),
-					gomock.Eq(uint(1)),
-				)
+				s.usecase.EXPECT().GetOrders(gomock.Any(), gomock.Any(), gomock.Any())
 			},
 			jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{ID: 1, Role: "customer"}),
-		},
-		{
-			"ok",
-			"/v1/orders",
-			nil,
-			http.MethodGet,
-			nil,
-			http.StatusOK,
-			func() {
-				s.orderRepository.EXPECT().GetOrdersForOrganizer(
-					gomock.Eq(&[]model.Order{}),
-					gomock.Eq(uint(1)),
-				)
-			},
-			jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{ID: 1, Role: "organizer"}),
 		},
 	}
 
@@ -187,10 +147,8 @@ func (s *orderHandlerSuite) TestCreateOrder() {
 			},
 			http.StatusBadRequest,
 			func() {
-				s.serviceRepository.EXPECT().Find(
-					gomock.Eq(&model.Service{}),
-					gomock.Eq("1"),
-				)
+				apiError := helper.NewAPIError(http.StatusBadRequest, "")
+				s.usecase.EXPECT().CreateOrder(gomock.Any(), gomock.Any(), gomock.Any()).Return(apiError)
 			},
 			jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{ID: 1, Role: "customer"}),
 		},
@@ -211,17 +169,7 @@ func (s *orderHandlerSuite) TestCreateOrder() {
 			},
 			http.StatusOK,
 			func() {
-				s.serviceRepository.EXPECT().Find(
-					gomock.Eq(&model.Service{}),
-					gomock.Eq("1"),
-				).SetArg(0, model.Service{Model: gorm.Model{ID: 1}})
-
-				s.userRepository.EXPECT().Find(
-					gomock.Eq(&model.User{}),
-					gomock.Eq(uint(1)),
-				)
-
-				s.orderRepository.EXPECT().Create(gomock.Any())
+				s.usecase.EXPECT().CreateOrder(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
 			jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{ID: 1, Role: "customer"}),
 		},
@@ -273,46 +221,11 @@ func (s *orderHandlerSuite) TestAcceptOrCompleteOrder() {
 			nil,
 			http.StatusNotFound,
 			func() {
-				s.orderRepository.EXPECT().Find(
-					gomock.Eq(&model.Order{}),
-					gomock.Eq(""),
-				)
+				apiError := helper.NewAPIError(http.StatusNotFound, "")
+				s.usecase.EXPECT().AcceptOrCompleteOrder(gomock.Any(), gomock.Any()).Return(apiError)
 			},
 			nil,
 		},
-		{
-			"unauthorized",
-			"/v1/orders/:id/accept",
-			nil,
-			http.MethodPost,
-			nil,
-			http.StatusUnauthorized,
-			func() {
-				s.orderRepository.EXPECT().Find(
-					gomock.Eq(&model.Order{}),
-					gomock.Eq(""),
-				).SetArg(0, model.Order{
-					Model: gorm.Model{ID: 1},
-					Services: []model.Service{
-						{
-							Model:  gorm.Model{ID: 1},
-							UserID: 1,
-						},
-					},
-				})
-			},
-			jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{ID: 2, Role: "organizer"}),
-		},
-		// {
-		// 	"ok",
-		// 	"/v1/orders/:id/accept",
-		// 	nil,
-		// 	http.MethodPost,
-		// 	nil,
-		// 	http.StatusOK,
-		// 	func() {},
-		// 	jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{ID: 1, Role: "organizer"}),
-		// },
 		{
 			"ok",
 			"/v1/orders/:id/complete",
@@ -321,18 +234,7 @@ func (s *orderHandlerSuite) TestAcceptOrCompleteOrder() {
 			nil,
 			http.StatusOK,
 			func() {
-				s.orderRepository.EXPECT().Find(
-					gomock.Eq(&model.Order{}),
-					gomock.Eq(""),
-				).SetArg(0, model.Order{
-					Model: gorm.Model{ID: 1},
-					Services: []model.Service{
-						{
-							Model:  gorm.Model{ID: 1},
-							UserID: 1,
-						},
-					},
-				})
+				s.usecase.EXPECT().AcceptOrCompleteOrder(gomock.Any(), gomock.Any()).Return(nil)
 			},
 			jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{ID: 1, Role: "organizer"}),
 		},
@@ -385,27 +287,10 @@ func (s *orderHandlerSuite) TestCancelOrder() {
 			nil,
 			http.StatusNotFound,
 			func() {
-				s.orderRepository.EXPECT().Find(
-					gomock.Eq(&model.Order{}),
-					gomock.Eq(""),
-				)
+				apiError := helper.NewAPIError(http.StatusNotFound, "")
+				s.usecase.EXPECT().CancelOrder(gomock.Any(), gomock.Any()).Return(apiError)
 			},
 			nil,
-		},
-		{
-			"unauthorized",
-			"/v1/orders/:id/cancel",
-			nil,
-			http.MethodPost,
-			nil,
-			http.StatusUnauthorized,
-			func() {
-				s.orderRepository.EXPECT().Find(
-					gomock.Eq(&model.Order{}),
-					gomock.Eq(""),
-				).SetArg(0, model.Order{Model: gorm.Model{ID: 1}, UserID: 2})
-			},
-			jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{ID: 1}),
 		},
 		{
 			"ok",
@@ -415,12 +300,7 @@ func (s *orderHandlerSuite) TestCancelOrder() {
 			nil,
 			http.StatusOK,
 			func() {
-				s.orderRepository.EXPECT().Find(
-					gomock.Eq(&model.Order{}),
-					gomock.Eq(""),
-				).SetArg(0, model.Order{Model: gorm.Model{ID: 1}, UserID: 1})
-
-				s.orderRepository.EXPECT().Delete(gomock.Any())
+				s.usecase.EXPECT().CancelOrder(gomock.Any(), gomock.Any()).Return(nil)
 			},
 			jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{ID: 1}),
 		},
@@ -476,10 +356,8 @@ func (s *orderHandlerSuite) TestPaymentStatus() {
 			},
 			http.StatusNotFound,
 			func() {
-				s.paymentRepository.EXPECT().FindOnlyByOrderID(
-					gomock.Eq(&model.Payment{}),
-					gomock.Eq("1"),
-				)
+				apiError := helper.NewAPIError(http.StatusNotFound, "")
+				s.usecase.EXPECT().PaymentStatus(gomock.Any()).Return(apiError)
 			},
 			nil,
 		},
@@ -494,39 +372,7 @@ func (s *orderHandlerSuite) TestPaymentStatus() {
 			},
 			http.StatusOK,
 			func() {
-				s.paymentRepository.EXPECT().FindOnlyByOrderID(
-					gomock.Eq(&model.Payment{}),
-					gomock.Eq("1"),
-				).SetArg(0, model.Payment{Model: gorm.Model{ID: 1}, OrderID: 1})
-
-				s.paymentRepository.EXPECT().Update(gomock.Any(), gomock.Any())
-			},
-			nil,
-		},
-		{
-			"ok",
-			"/v1/webhook",
-			nil,
-			http.MethodPost,
-			&request.MidtransTransactionNotificationRequest{
-				OrderID: "EOP-1",
-				Status:  "deny",
-			},
-			http.StatusOK,
-			func() {
-				s.paymentRepository.EXPECT().FindOnlyByOrderID(
-					gomock.Eq(&model.Payment{}),
-					gomock.Eq("1"),
-				).SetArg(0, model.Payment{Model: gorm.Model{ID: 1}, OrderID: 1})
-
-				s.orderRepository.EXPECT().FindOnly(
-					gomock.Eq(&model.Order{}),
-					gomock.Eq("1"),
-				).SetArg(0, model.Order{Model: gorm.Model{ID: 1}})
-
-				s.orderRepository.EXPECT().Delete(gomock.Any())
-
-				s.paymentRepository.EXPECT().Update(gomock.Any(), gomock.Any())
+				s.usecase.EXPECT().PaymentStatus(gomock.Any()).Return(nil)
 			},
 			nil,
 		},

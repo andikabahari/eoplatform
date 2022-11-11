@@ -5,28 +5,19 @@ import (
 
 	"github.com/andikabahari/eoplatform/helper"
 	"github.com/andikabahari/eoplatform/model"
-	"github.com/andikabahari/eoplatform/repository"
 	"github.com/andikabahari/eoplatform/request"
 	"github.com/andikabahari/eoplatform/response"
-	s "github.com/andikabahari/eoplatform/server"
+	u "github.com/andikabahari/eoplatform/usecase"
 	"github.com/golang-jwt/jwt"
 	"github.com/labstack/echo/v4"
-	"golang.org/x/crypto/bcrypt"
 )
 
 type AccountHandler struct {
-	server         *s.Server
-	userRepository repository.UserRepository
+	usecase u.AccountUsecase
 }
 
-func NewAccountHandler(
-	server *s.Server,
-	userRepository repository.UserRepository,
-) *AccountHandler {
-	return &AccountHandler{
-		server,
-		userRepository,
-	}
+func NewAccountHandler(usecase u.AccountUsecase) *AccountHandler {
+	return &AccountHandler{usecase}
 }
 
 func (h *AccountHandler) GetAccount(c echo.Context) error {
@@ -34,12 +25,12 @@ func (h *AccountHandler) GetAccount(c echo.Context) error {
 	claims := userToken.Claims.(*helper.JWTCustomClaims)
 
 	user := model.User{}
-	h.userRepository.Find(&user, claims.ID)
 
-	if user.ID == 0 {
-		return c.JSON(http.StatusNotFound, echo.Map{
+	if apiError := h.usecase.GetAccount(claims, &user); apiError != nil {
+		code, message := apiError.APIError()
+		return c.JSON(code, echo.Map{
 			"message": "fetch account failure",
-			"error":   "user not found",
+			"error":   message,
 		})
 	}
 
@@ -67,16 +58,14 @@ func (h *AccountHandler) UpdateAccount(c echo.Context) error {
 	claims := userToken.Claims.(*helper.JWTCustomClaims)
 
 	user := model.User{}
-	h.userRepository.Find(&user, claims.ID)
 
-	if user.ID == 0 {
-		return c.JSON(http.StatusNotFound, echo.Map{
+	if apiError := h.usecase.UpdateAccount(claims, &user, &req); apiError != nil {
+		code, message := apiError.APIError()
+		return c.JSON(code, echo.Map{
 			"message": "update account failure",
-			"error":   "user not found",
+			"error":   message,
 		})
 	}
-
-	h.userRepository.Update(&user, &req)
 
 	return c.JSON(http.StatusOK, echo.Map{
 		"message": "update account successful",
@@ -111,28 +100,14 @@ func (h *AccountHandler) ResetPassword(c echo.Context) error {
 	claims := userToken.Claims.(*helper.JWTCustomClaims)
 
 	user := model.User{}
-	h.userRepository.Find(&user, claims.ID)
 
-	if user.ID == 0 {
-		return c.JSON(http.StatusNotFound, echo.Map{
+	if apiError := h.usecase.ResetPassword(claims, &user, &req); apiError != nil {
+		code, message := apiError.APIError()
+		return c.JSON(code, echo.Map{
 			"message": "reset password failure",
-			"error":   "user not found",
+			"error":   message,
 		})
 	}
-
-	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.OldPassword)); err != nil {
-		return c.JSON(http.StatusUnauthorized, echo.Map{
-			"message": "reset password failure",
-			"error":   "unauthorized",
-		})
-	}
-
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), h.server.Config.Auth.Cost)
-	if err != nil {
-		return err
-	}
-
-	h.userRepository.ResetPassword(&user, string(hashedPassword))
 
 	return c.JSON(http.StatusOK, echo.Map{
 		"message": "reset password successful",

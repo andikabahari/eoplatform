@@ -4,27 +4,18 @@ import (
 	"net/http"
 
 	"github.com/andikabahari/eoplatform/model"
-	"github.com/andikabahari/eoplatform/repository"
 	"github.com/andikabahari/eoplatform/request"
 	"github.com/andikabahari/eoplatform/response"
-	s "github.com/andikabahari/eoplatform/server"
+	u "github.com/andikabahari/eoplatform/usecase"
 	"github.com/labstack/echo/v4"
-	"golang.org/x/crypto/bcrypt"
 )
 
 type RegisterHandler struct {
-	server         *s.Server
-	userRepository repository.UserRepository
+	usecase u.RegisterUsecase
 }
 
-func NewRegisterHandler(
-	server *s.Server,
-	userRepository repository.UserRepository,
-) *RegisterHandler {
-	return &RegisterHandler{
-		server,
-		userRepository,
-	}
+func NewRegisterHandler(usecase u.RegisterUsecase) *RegisterHandler {
+	return &RegisterHandler{usecase}
 }
 
 func (h *RegisterHandler) Register(c echo.Context) error {
@@ -41,27 +32,15 @@ func (h *RegisterHandler) Register(c echo.Context) error {
 		})
 	}
 
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), h.server.Config.Auth.Cost)
-	if err != nil {
-		return err
-	}
+	user := model.User{}
 
-	existingUser := model.User{}
-	h.userRepository.FindByUsername(&existingUser, req.Username)
-	if existingUser.ID > 0 {
-		return c.JSON(http.StatusBadRequest, echo.Map{
+	if apiError := h.usecase.Register(&user, &req); apiError != nil {
+		code, message := apiError.APIError()
+		return c.JSON(code, echo.Map{
 			"message": "registration failure",
-			"error":   "user with the same username already exists",
+			"error":   message,
 		})
 	}
-
-	user := model.User{}
-	user.Name = req.Name
-	user.Username = req.Username
-	user.Password = string(hashedPassword)
-	user.Role = req.Role
-
-	h.userRepository.Create(&user)
 
 	return c.JSON(http.StatusOK, echo.Map{
 		"message": "registration successful",

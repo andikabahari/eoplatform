@@ -8,25 +8,21 @@ import (
 	"os"
 	"testing"
 
-	"github.com/andikabahari/eoplatform/config"
 	"github.com/andikabahari/eoplatform/helper"
-	"github.com/andikabahari/eoplatform/model"
-	"github.com/andikabahari/eoplatform/repository/mock_repository"
 	"github.com/andikabahari/eoplatform/request"
 	"github.com/andikabahari/eoplatform/server"
 	"github.com/andikabahari/eoplatform/testhelper"
+	mu "github.com/andikabahari/eoplatform/usecase/mock_usecase"
 	"github.com/golang-jwt/jwt"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/suite"
-	"golang.org/x/crypto/bcrypt"
-	"gorm.io/gorm"
 )
 
 type accountHandlerSuite struct {
 	suite.Suite
 
-	ctrl           *gomock.Controller
-	userRepository *mock_repository.MockUserRepository
+	ctrl    *gomock.Controller
+	usecase *mu.MockAccountUsecase
 
 	server  *server.Server
 	handler *AccountHandler
@@ -36,11 +32,11 @@ func (s *accountHandlerSuite) SetupSuite() {
 	os.Setenv("APP_ENV", "production")
 
 	s.ctrl = gomock.NewController(s.T())
-	s.userRepository = mock_repository.NewMockUserRepository(s.ctrl)
+	s.usecase = mu.NewMockAccountUsecase(s.ctrl)
 
 	conn, _ := testhelper.Mock()
 	s.server = testhelper.NewServer(conn)
-	s.handler = NewAccountHandler(s.server, s.userRepository)
+	s.handler = NewAccountHandler(s.usecase)
 }
 
 func (s *accountHandlerSuite) TearDownSuite() {
@@ -68,10 +64,8 @@ func (s *accountHandlerSuite) TestGetAccount() {
 			nil,
 			jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{}),
 			func() {
-				s.userRepository.EXPECT().Find(
-					gomock.Eq(&model.User{}),
-					gomock.Eq(uint(0)),
-				)
+				apiError := helper.NewAPIError(http.StatusNotFound, "")
+				s.usecase.EXPECT().GetAccount(gomock.Any(), gomock.Any()).Return(apiError)
 			},
 			http.StatusNotFound,
 		},
@@ -82,10 +76,7 @@ func (s *accountHandlerSuite) TestGetAccount() {
 			nil,
 			jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{ID: 1}),
 			func() {
-				s.userRepository.EXPECT().Find(
-					gomock.Eq(&model.User{}),
-					gomock.Eq(uint(1)),
-				).SetArg(0, model.User{Model: gorm.Model{ID: 1}})
+				s.usecase.EXPECT().GetAccount(gomock.Any(), gomock.Any()).Return(nil)
 			},
 			http.StatusOK,
 		},
@@ -130,7 +121,8 @@ func (s *accountHandlerSuite) TestUpdateAccount() {
 			http.MethodPost,
 			nil,
 			nil,
-			func() {},
+			func() {
+			},
 			http.StatusBadRequest,
 		},
 		{
@@ -142,10 +134,8 @@ func (s *accountHandlerSuite) TestUpdateAccount() {
 			},
 			jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{}),
 			func() {
-				s.userRepository.EXPECT().Find(
-					gomock.Eq(&model.User{}),
-					gomock.Eq(uint(0)),
-				)
+				apiError := helper.NewAPIError(http.StatusNotFound, "")
+				s.usecase.EXPECT().UpdateAccount(gomock.Any(), gomock.Any(), gomock.Any()).Return(apiError)
 			},
 			http.StatusNotFound,
 		},
@@ -158,12 +148,7 @@ func (s *accountHandlerSuite) TestUpdateAccount() {
 			},
 			jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{ID: 1}),
 			func() {
-				s.userRepository.EXPECT().Find(
-					gomock.Eq(&model.User{}),
-					gomock.Eq(uint(1)),
-				).SetArg(0, model.User{Model: gorm.Model{ID: 1}})
-
-				s.userRepository.EXPECT().Update(gomock.Any(), gomock.Any())
+				s.usecase.EXPECT().UpdateAccount(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
 			http.StatusOK,
 		},
@@ -235,30 +220,10 @@ func (s *accountHandlerSuite) TestResetPassword() {
 			},
 			jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{}),
 			func() {
-				s.userRepository.EXPECT().Find(
-					gomock.Eq(&model.User{}),
-					gomock.Eq(uint(0)),
-				)
+				apiError := helper.NewAPIError(http.StatusNotFound, "")
+				s.usecase.EXPECT().ResetPassword(gomock.Any(), gomock.Any(), gomock.Any()).Return(apiError)
 			},
 			http.StatusNotFound,
-		},
-		{
-			"unauthorized",
-			"/v1/account/password",
-			http.MethodPost,
-			&request.UpdateUserPasswordRequest{
-				Password:        "password",
-				ConfirmPassword: "password",
-				OldPassword:     "wrong",
-			},
-			jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{ID: 1}),
-			func() {
-				s.userRepository.EXPECT().Find(
-					gomock.Eq(&model.User{}),
-					gomock.Eq(uint(1)),
-				).SetArg(0, model.User{Model: gorm.Model{ID: 1}, Password: "password"})
-			},
-			http.StatusUnauthorized,
 		},
 		{
 			"ok",
@@ -271,13 +236,7 @@ func (s *accountHandlerSuite) TestResetPassword() {
 			},
 			jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{ID: 1}),
 			func() {
-				hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("password"), config.LoadAuthConfig().Cost)
-				s.userRepository.EXPECT().Find(
-					gomock.Eq(&model.User{}),
-					gomock.Eq(uint(1)),
-				).SetArg(0, model.User{Model: gorm.Model{ID: 1}, Password: string(hashedPassword)})
-
-				s.userRepository.EXPECT().ResetPassword(gomock.Any(), gomock.Any())
+				s.usecase.EXPECT().ResetPassword(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
 			http.StatusOK,
 		},

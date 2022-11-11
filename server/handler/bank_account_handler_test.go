@@ -9,22 +9,20 @@ import (
 	"testing"
 
 	"github.com/andikabahari/eoplatform/helper"
-	"github.com/andikabahari/eoplatform/model"
-	"github.com/andikabahari/eoplatform/repository/mock_repository"
 	"github.com/andikabahari/eoplatform/request"
 	"github.com/andikabahari/eoplatform/server"
 	"github.com/andikabahari/eoplatform/testhelper"
+	mu "github.com/andikabahari/eoplatform/usecase/mock_usecase"
 	"github.com/golang-jwt/jwt"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/suite"
-	"gorm.io/gorm"
 )
 
 type bankAccountHandlerSuite struct {
 	suite.Suite
 
-	ctrl                  *gomock.Controller
-	bankAccountRepository *mock_repository.MockBankAccountRepository
+	ctrl    *gomock.Controller
+	usecase *mu.MockBankAccountUsecase
 
 	server  *server.Server
 	handler *BankAccountHandler
@@ -34,11 +32,11 @@ func (s *bankAccountHandlerSuite) SetupSuite() {
 	os.Setenv("APP_ENV", "production")
 
 	s.ctrl = gomock.NewController(s.T())
-	s.bankAccountRepository = mock_repository.NewMockBankAccountRepository(s.ctrl)
+	s.usecase = mu.NewMockBankAccountUsecase(s.ctrl)
 
 	conn, _ := testhelper.Mock()
 	s.server = testhelper.NewServer(conn)
-	s.handler = NewBankAccountHandler(s.server, s.bankAccountRepository)
+	s.handler = NewBankAccountHandler(s.usecase)
 }
 
 func (s *bankAccountHandlerSuite) TearDownSuite() {
@@ -75,10 +73,7 @@ func (s *bankAccountHandlerSuite) TestGetBankAccounts() {
 			nil,
 			jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{ID: 1, Role: "organizer"}),
 			func() {
-				s.bankAccountRepository.EXPECT().FindByUserID(
-					gomock.Eq(&model.BankAccount{}),
-					gomock.Eq(uint(1)),
-				)
+				s.usecase.EXPECT().GetBankAccount(gomock.Any(), gomock.Any())
 			},
 			http.StatusOK,
 		},
@@ -147,13 +142,7 @@ func (s *bankAccountHandlerSuite) TestCreateBankAccount() {
 			},
 			jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{ID: 1, Role: "organizer"}),
 			func() {
-				s.bankAccountRepository.EXPECT().Create(
-					gomock.Eq(&model.BankAccount{
-						Bank:     "bni",
-						VANumber: "12345",
-						UserID:   1,
-					}),
-				)
+				s.usecase.EXPECT().CreateBankAccount(gomock.Any(), gomock.Any(), gomock.Any())
 			},
 			http.StatusOK,
 		},
@@ -213,10 +202,8 @@ func (s *bankAccountHandlerSuite) TestUpdateBankAccount() {
 			},
 			jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{}),
 			func() {
-				s.bankAccountRepository.EXPECT().FindByUserID(
-					gomock.Eq(&model.BankAccount{}),
-					gomock.Eq(uint(0)),
-				)
+				apiError := helper.NewAPIError(http.StatusNotFound, "")
+				s.usecase.EXPECT().UpdateBankAccount(gomock.Any(), gomock.Any(), gomock.Any()).Return(apiError)
 			},
 			http.StatusNotFound,
 		},
@@ -232,20 +219,7 @@ func (s *bankAccountHandlerSuite) TestUpdateBankAccount() {
 			},
 			jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{ID: 1, Role: "organizer"}),
 			func() {
-				s.bankAccountRepository.EXPECT().FindByUserID(
-					gomock.Eq(&model.BankAccount{}),
-					gomock.Eq(uint(1)),
-				).SetArg(0, model.BankAccount{Model: gorm.Model{ID: 1}})
-
-				s.bankAccountRepository.EXPECT().Update(
-					gomock.Eq(&model.BankAccount{Model: gorm.Model{ID: 1}}),
-					gomock.Eq(&request.UpdateBankAccountRequest{
-						BasicBankAccount: request.BasicBankAccount{
-							Bank:     "bni",
-							VANumber: "12345",
-						},
-					}),
-				)
+				s.usecase.EXPECT().UpdateBankAccount(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
 			http.StatusOK,
 		},
