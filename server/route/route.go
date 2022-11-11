@@ -46,7 +46,8 @@ func Setup(server *s.Server) {
 	accountV1.PUT("/password", accountHandler.ResetPassword, auth)
 
 	serviceV1 := v1.Group("/services")
-	serviceHandler := handler.NewServiceHandler(server, serviceRepository)
+	serviceUsecase := usecase.NewServiceUsecase(serviceRepository)
+	serviceHandler := handler.NewServiceHandler(serviceUsecase)
 	serviceV1.GET("", serviceHandler.GetServices)
 	serviceV1.GET("/:id", serviceHandler.FindService)
 	serviceV1.POST("", serviceHandler.CreateService, auth)
