@@ -9,11 +9,10 @@ import (
 	"testing"
 
 	"github.com/andikabahari/eoplatform/helper"
-	"github.com/andikabahari/eoplatform/model"
-	"github.com/andikabahari/eoplatform/repository/mock_repository"
 	"github.com/andikabahari/eoplatform/request"
 	"github.com/andikabahari/eoplatform/server"
 	"github.com/andikabahari/eoplatform/testhelper"
+	mu "github.com/andikabahari/eoplatform/usecase/mock_usecase"
 	"github.com/golang-jwt/jwt"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/suite"
@@ -22,9 +21,8 @@ import (
 type feedbackHandlerSuite struct {
 	suite.Suite
 
-	ctrl               *gomock.Controller
-	feedbackRepository *mock_repository.MockFeedbackRepository
-	userRepository     *mock_repository.MockUserRepository
+	ctrl    *gomock.Controller
+	usecase *mu.MockFeedbackUsecase
 
 	server  *server.Server
 	handler *FeedbackHandler
@@ -34,12 +32,11 @@ func (s *feedbackHandlerSuite) SetupSuite() {
 	os.Setenv("APP_ENV", "production")
 
 	s.ctrl = gomock.NewController(s.T())
-	s.feedbackRepository = mock_repository.NewMockFeedbackRepository(s.ctrl)
-	s.userRepository = mock_repository.NewMockUserRepository(s.ctrl)
+	s.usecase = mu.NewMockFeedbackUsecase(s.ctrl)
 
 	conn, _ := testhelper.Mock()
 	s.server = testhelper.NewServer(conn)
-	s.handler = NewFeedbackHandler(s.server, s.feedbackRepository, s.userRepository)
+	s.handler = NewFeedbackHandler(s.usecase)
 }
 
 func TestFeedbackHandlerSuite(t *testing.T) {
@@ -63,10 +60,7 @@ func (s *feedbackHandlerSuite) TestGetFeedbacks() {
 			nil,
 			http.StatusOK,
 			func() {
-				s.feedbackRepository.EXPECT().Get(
-					gomock.Eq(&[]model.Feedback{}),
-					gomock.Eq(""),
-				)
+				s.usecase.EXPECT().GetFeedbacks(gomock.Any(), gomock.Any())
 			},
 			nil,
 		},
@@ -124,7 +118,7 @@ func (s *feedbackHandlerSuite) TestCreateFeedback() {
 			jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{ID: 1, Role: "customer"}),
 		},
 		{
-			"forbidden",
+			"ok",
 			"/v1/feedbacks",
 			http.MethodPost,
 			&request.CreateFeedbackRequest{
@@ -132,46 +126,12 @@ func (s *feedbackHandlerSuite) TestCreateFeedback() {
 				Rating:      5,
 				ToUserID:    1,
 			},
-			http.StatusForbidden,
+			http.StatusOK,
 			func() {
-				s.feedbackRepository.EXPECT().GetFeedbacksCount(
-					gomock.Eq(uint(1)),
-					gomock.Eq(uint(1)),
-				)
-
-				s.feedbackRepository.EXPECT().GetOrdersCount(
-					gomock.Eq(uint(1)),
-					gomock.Eq(uint(1)),
-				)
+				s.usecase.EXPECT().CreateFeedback(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
 			jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{ID: 1, Role: "customer"}),
 		},
-		// {
-		// 	"ok",
-		// 	"/v1/feedbacks",
-		// 	http.MethodPost,
-		// 	&request.CreateFeedbackRequest{
-		// 		Description: "Good job!",
-		// 		Rating:      5,
-		// 		ToUserID:    1,
-		// 	},
-		// 	http.StatusOK,
-		// 	func() {},
-		// 	jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{ID: 1, Role: "customer"}),
-		// },
-		// {
-		// 	"ok",
-		// 	"/v1/feedbacks",
-		// 	http.MethodPost,
-		// 	&request.CreateFeedbackRequest{
-		// 		Description: "This is bad!",
-		// 		Rating:      1,
-		// 		ToUserID:    1,
-		// 	},
-		// 	http.StatusOK,
-		// 	func() {},
-		// 	jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{ID: 1, Role: "customer"}),
-		// },
 	}
 
 	for _, testCase := range testCases {

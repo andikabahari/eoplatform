@@ -78,7 +78,8 @@ func Setup(server *s.Server) {
 	bankAccountV1.PUT("", bankAccountHandler.UpdateBankAccount, auth)
 
 	feedbackV1 := v1.Group("/feedbacks")
-	feedbackHandler := handler.NewFeedbackHandler(server, feedbackRepository, userRepository)
+	feedbackUsecase := usecase.NewFeedbackUsecase(feedbackRepository, userRepository)
+	feedbackHandler := handler.NewFeedbackHandler(feedbackUsecase)
 	feedbackV1.GET("", feedbackHandler.GetFeedbacks)
 	feedbackV1.POST("", feedbackHandler.CreateFeedback, auth)
 }
