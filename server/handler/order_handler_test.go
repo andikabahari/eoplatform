@@ -1,55 +1,62 @@
-package test
+package handler
 
 import (
 	"bytes"
-	"database/sql"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"regexp"
 	"testing"
 
-	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/andikabahari/eoplatform/helper"
 	"github.com/andikabahari/eoplatform/request"
 	"github.com/andikabahari/eoplatform/server"
-	"github.com/andikabahari/eoplatform/server/handler"
-	"github.com/andikabahari/eoplatform/test/testhelper"
+	"github.com/andikabahari/eoplatform/testhelper"
+	mu "github.com/andikabahari/eoplatform/usecase/mock_usecase"
 	"github.com/golang-jwt/jwt"
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/suite"
 )
 
-type orderSuite struct {
+type orderHandlerSuite struct {
 	suite.Suite
-	mock    sqlmock.Sqlmock
+
+	ctrl    *gomock.Controller
+	usecase *mu.MockOrderUsecase
+
 	server  *server.Server
-	handler *handler.OrderHandler
+	handler *OrderHandler
 }
 
-func (s *orderSuite) SetupSuite() {
+func (s *orderHandlerSuite) SetupSuite() {
 	os.Setenv("APP_ENV", "production")
 
-	var conn *sql.DB
-	conn, s.mock = testhelper.Mock()
+	s.ctrl = gomock.NewController(s.T())
+	s.usecase = mu.NewMockOrderUsecase(s.ctrl)
+
+	conn, _ := testhelper.Mock()
 	s.server = testhelper.NewServer(conn)
-	s.handler = handler.NewOrderHandler(s.server)
+	s.handler = NewOrderHandler(s.usecase)
 }
 
-func TestOrderSuite(t *testing.T) {
-	suite.Run(t, new(orderSuite))
+func (s *orderHandlerSuite) TearDownSuite() {
+	s.ctrl.Finish()
 }
 
-func (s *orderSuite) TestGetOrders() {
+func TestOrderHandlerSuite(t *testing.T) {
+	suite.Run(t, new(orderHandlerSuite))
+}
+
+func (s *orderHandlerSuite) TestGetOrders() {
 	testCases := []struct {
 		Name         string
 		Endpoint     string
-		PathParam    *pathParam
+		PathParam    *testhelper.PathParam
 		Method       string
 		Body         any
 		ExpectedCode int
+		ExpectedFunc func()
 		Token        *jwt.Token
-		Queries      []query
 	}{
 		{
 			"ok",
@@ -58,37 +65,16 @@ func (s *orderSuite) TestGetOrders() {
 			http.MethodGet,
 			nil,
 			http.StatusOK,
-			jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{
-				ID:   1,
-				Role: "customer",
-			}),
-			[]query{
-				{
-					Raw:  regexp.QuoteMeta("SELECT * FROM `orders` WHERE user_id = ? AND `orders`.`deleted_at` IS NULL"),
-					Rows: sqlmock.NewRows([]string{"id"}).AddRow(1),
-				},
+			func() {
+				s.usecase.EXPECT().GetOrders(gomock.Any(), gomock.Any(), gomock.Any())
 			},
-		},
-		{
-			"ok",
-			"/v1/orders",
-			nil,
-			http.MethodGet,
-			nil,
-			http.StatusOK,
-			jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{
-				ID:   1,
-				Role: "organizer",
-			}),
-			nil,
+			jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{ID: 1, Role: "customer"}),
 		},
 	}
 
 	for _, testCase := range testCases {
 		s.T().Run(testCase.Name, func(t *testing.T) {
-			for _, query := range testCase.Queries {
-				s.mock.ExpectQuery(query.Raw).WillReturnRows(query.Rows)
-			}
+			testCase.ExpectedFunc()
 
 			bodyReader := new(bytes.Reader)
 			if testCase.Body != nil {
@@ -113,16 +99,16 @@ func (s *orderSuite) TestGetOrders() {
 	}
 }
 
-func (s *orderSuite) TestCreateOrder() {
+func (s *orderHandlerSuite) TestCreateOrder() {
 	testCases := []struct {
 		Name         string
 		Endpoint     string
-		PathParam    *pathParam
+		PathParam    *testhelper.PathParam
 		Method       string
 		Body         *request.CreateOrderRequest
 		ExpectedCode int
+		ExpectedFunc func()
 		Token        *jwt.Token
-		Queries      []query
 	}{
 		{
 			"unauthorized",
@@ -131,11 +117,8 @@ func (s *orderSuite) TestCreateOrder() {
 			http.MethodPost,
 			nil,
 			http.StatusUnauthorized,
-			jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{
-				ID:   1,
-				Role: "organizer",
-			}),
-			nil,
+			func() {},
+			jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{ID: 1, Role: "organizer"}),
 		},
 		{
 			"bad request",
@@ -144,11 +127,8 @@ func (s *orderSuite) TestCreateOrder() {
 			http.MethodPost,
 			nil,
 			http.StatusBadRequest,
-			jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{
-				ID:   1,
-				Role: "customer",
-			}),
-			nil,
+			func() {},
+			jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{ID: 1, Role: "customer"}),
 		},
 		{
 			"bad request",
@@ -166,11 +146,11 @@ func (s *orderSuite) TestCreateOrder() {
 				ServiceIDs:  []uint{1},
 			},
 			http.StatusBadRequest,
-			jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{
-				ID:   1,
-				Role: "customer",
-			}),
-			nil,
+			func() {
+				apiError := helper.NewAPIError(http.StatusBadRequest, "")
+				s.usecase.EXPECT().CreateOrder(gomock.Any(), gomock.Any(), gomock.Any()).Return(apiError)
+			},
+			jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{ID: 1, Role: "customer"}),
 		},
 		{
 			"ok",
@@ -188,24 +168,16 @@ func (s *orderSuite) TestCreateOrder() {
 				ServiceIDs:  []uint{1},
 			},
 			http.StatusOK,
-			jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{
-				ID:   1,
-				Role: "customer",
-			}),
-			[]query{
-				{
-					Raw:  regexp.QuoteMeta("SELECT * FROM `services` WHERE id = ? AND `services`.`deleted_at` IS NULL"),
-					Rows: sqlmock.NewRows([]string{"id", "user_id"}).AddRow(1, 2),
-				},
+			func() {
+				s.usecase.EXPECT().CreateOrder(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
+			jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{ID: 1, Role: "customer"}),
 		},
 	}
 
 	for _, testCase := range testCases {
 		s.T().Run(testCase.Name, func(t *testing.T) {
-			for _, query := range testCase.Queries {
-				s.mock.ExpectQuery(query.Raw).WillReturnRows(query.Rows)
-			}
+			testCase.ExpectedFunc()
 
 			bodyReader := new(bytes.Reader)
 			if testCase.Body != nil {
@@ -230,16 +202,16 @@ func (s *orderSuite) TestCreateOrder() {
 	}
 }
 
-func (s *orderSuite) TestAcceptOrCompleteOrder() {
+func (s *orderHandlerSuite) TestAcceptOrCompleteOrder() {
 	testCases := []struct {
 		Name         string
 		Endpoint     string
-		PathParam    *pathParam
+		PathParam    *testhelper.PathParam
 		Method       string
 		Body         any
 		ExpectedCode int
+		ExpectedFunc func()
 		Token        *jwt.Token
-		Queries      []query
 	}{
 		{
 			"not found",
@@ -248,61 +220,12 @@ func (s *orderSuite) TestAcceptOrCompleteOrder() {
 			http.MethodPost,
 			nil,
 			http.StatusNotFound,
-			nil,
-			nil,
-		},
-		{
-			"unauthorized",
-			"/v1/orders/:id/accept",
-			nil,
-			http.MethodPost,
-			nil,
-			http.StatusUnauthorized,
-			jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{
-				ID:   2,
-				Role: "organizer",
-			}),
-			[]query{
-				{
-					Raw:  regexp.QuoteMeta("SELECT * FROM `orders` WHERE id = ? AND `orders`.`deleted_at` IS NULL"),
-					Rows: sqlmock.NewRows([]string{"id"}).AddRow(1),
-				},
-				{
-					Raw:  regexp.QuoteMeta("SELECT * FROM `order_services`"),
-					Rows: sqlmock.NewRows([]string{"order_id", "service_id"}).AddRow(1, 1),
-				},
-				{
-					Raw:  regexp.QuoteMeta("SELECT * FROM `services`"),
-					Rows: sqlmock.NewRows([]string{"id", "user_id"}).AddRow(1, 1),
-				},
+			func() {
+				apiError := helper.NewAPIError(http.StatusNotFound, "")
+				s.usecase.EXPECT().AcceptOrCompleteOrder(gomock.Any(), gomock.Any()).Return(apiError)
 			},
+			nil,
 		},
-		// {
-		// 	"ok",
-		// 	"/v1/orders/:id/accept",
-		// 	nil,
-		// 	http.MethodPost,
-		// 	nil,
-		// 	http.StatusOK,
-		// 	jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{
-		// 		ID:   1,
-		// 		Role: "organizer",
-		// 	}),
-		// 	[]query{
-		// 		{
-		// 			Raw:  regexp.QuoteMeta("SELECT * FROM `orders` WHERE id = ? AND `orders`.`deleted_at` IS NULL"),
-		// 			Rows: sqlmock.NewRows([]string{"id"}).AddRow(1),
-		// 		},
-		// 		{
-		// 			Raw:  regexp.QuoteMeta("SELECT * FROM `order_services`"),
-		// 			Rows: sqlmock.NewRows([]string{"order_id", "service_id"}).AddRow(1, 1),
-		// 		},
-		// 		{
-		// 			Raw:  regexp.QuoteMeta("SELECT * FROM `services`"),
-		// 			Rows: sqlmock.NewRows([]string{"id", "user_id"}).AddRow(1, 1),
-		// 		},
-		// 	},
-		// },
 		{
 			"ok",
 			"/v1/orders/:id/complete",
@@ -310,32 +233,16 @@ func (s *orderSuite) TestAcceptOrCompleteOrder() {
 			http.MethodPost,
 			nil,
 			http.StatusOK,
-			jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{
-				ID:   1,
-				Role: "organizer",
-			}),
-			[]query{
-				{
-					Raw:  regexp.QuoteMeta("SELECT * FROM `orders` WHERE id = ? AND `orders`.`deleted_at` IS NULL"),
-					Rows: sqlmock.NewRows([]string{"id", "is_accepted"}).AddRow(1, 1),
-				},
-				{
-					Raw:  regexp.QuoteMeta("SELECT * FROM `order_services`"),
-					Rows: sqlmock.NewRows([]string{"order_id", "service_id"}).AddRow(1, 1),
-				},
-				{
-					Raw:  regexp.QuoteMeta("SELECT * FROM `services`"),
-					Rows: sqlmock.NewRows([]string{"id", "user_id"}).AddRow(1, 1),
-				},
+			func() {
+				s.usecase.EXPECT().AcceptOrCompleteOrder(gomock.Any(), gomock.Any()).Return(nil)
 			},
+			jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{ID: 1, Role: "organizer"}),
 		},
 	}
 
 	for _, testCase := range testCases {
 		s.T().Run(testCase.Name, func(t *testing.T) {
-			for _, query := range testCase.Queries {
-				s.mock.ExpectQuery(query.Raw).WillReturnRows(query.Rows)
-			}
+			testCase.ExpectedFunc()
 
 			bodyReader := new(bytes.Reader)
 			if testCase.Body != nil {
@@ -361,16 +268,16 @@ func (s *orderSuite) TestAcceptOrCompleteOrder() {
 	}
 }
 
-func (s *orderSuite) TestCancelOrder() {
+func (s *orderHandlerSuite) TestCancelOrder() {
 	testCases := []struct {
 		Name         string
 		Endpoint     string
-		PathParam    *pathParam
+		PathParam    *testhelper.PathParam
 		Method       string
 		Body         any
 		ExpectedCode int
+		ExpectedFunc func()
 		Token        *jwt.Token
-		Queries      []query
 	}{
 		{
 			"not found",
@@ -379,23 +286,11 @@ func (s *orderSuite) TestCancelOrder() {
 			http.MethodPost,
 			nil,
 			http.StatusNotFound,
-			nil,
-			nil,
-		},
-		{
-			"unauthorized",
-			"/v1/orders/:id/cancel",
-			nil,
-			http.MethodPost,
-			nil,
-			http.StatusUnauthorized,
-			jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{ID: 1}),
-			[]query{
-				{
-					Raw:  regexp.QuoteMeta("SELECT * FROM `orders` WHERE id = ? AND `orders`.`deleted_at` IS NULL"),
-					Rows: sqlmock.NewRows([]string{"id", "user_id"}).AddRow(1, 2),
-				},
+			func() {
+				apiError := helper.NewAPIError(http.StatusNotFound, "")
+				s.usecase.EXPECT().CancelOrder(gomock.Any(), gomock.Any()).Return(apiError)
 			},
+			nil,
 		},
 		{
 			"ok",
@@ -404,21 +299,16 @@ func (s *orderSuite) TestCancelOrder() {
 			http.MethodPost,
 			nil,
 			http.StatusOK,
-			jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{ID: 1}),
-			[]query{
-				{
-					Raw:  regexp.QuoteMeta("SELECT * FROM `orders` WHERE id = ? AND `orders`.`deleted_at` IS NULL"),
-					Rows: sqlmock.NewRows([]string{"id", "user_id"}).AddRow(1, 1),
-				},
+			func() {
+				s.usecase.EXPECT().CancelOrder(gomock.Any(), gomock.Any()).Return(nil)
 			},
+			jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{ID: 1}),
 		},
 	}
 
 	for _, testCase := range testCases {
 		s.T().Run(testCase.Name, func(t *testing.T) {
-			for _, query := range testCase.Queries {
-				s.mock.ExpectQuery(query.Raw).WillReturnRows(query.Rows)
-			}
+			testCase.ExpectedFunc()
 
 			bodyReader := new(bytes.Reader)
 			if testCase.Body != nil {
@@ -444,16 +334,16 @@ func (s *orderSuite) TestCancelOrder() {
 	}
 }
 
-func (s *orderSuite) TestPaymentStatus() {
+func (s *orderHandlerSuite) TestPaymentStatus() {
 	testCases := []struct {
 		Name         string
 		Endpoint     string
-		PathParam    *pathParam
+		PathParam    *testhelper.PathParam
 		Method       string
 		Body         *request.MidtransTransactionNotificationRequest
 		ExpectedCode int
+		ExpectedFunc func()
 		Token        *jwt.Token
-		Queries      []query
 	}{
 		{
 			"not found",
@@ -465,7 +355,10 @@ func (s *orderSuite) TestPaymentStatus() {
 				Status:  "",
 			},
 			http.StatusNotFound,
-			nil,
+			func() {
+				apiError := helper.NewAPIError(http.StatusNotFound, "")
+				s.usecase.EXPECT().PaymentStatus(gomock.Any()).Return(apiError)
+			},
 			nil,
 		},
 		{
@@ -478,39 +371,16 @@ func (s *orderSuite) TestPaymentStatus() {
 				Status:  "settlement",
 			},
 			http.StatusOK,
-			nil,
-			[]query{
-				{
-					Raw:  regexp.QuoteMeta("SELECT * FROM `payments`"),
-					Rows: sqlmock.NewRows([]string{"id", "order_id"}).AddRow(1, 1),
-				},
+			func() {
+				s.usecase.EXPECT().PaymentStatus(gomock.Any()).Return(nil)
 			},
-		},
-		{
-			"ok",
-			"/v1/webhook",
 			nil,
-			http.MethodPost,
-			&request.MidtransTransactionNotificationRequest{
-				OrderID: "EOP-1",
-				Status:  "deny",
-			},
-			http.StatusOK,
-			nil,
-			[]query{
-				{
-					Raw:  regexp.QuoteMeta("SELECT * FROM `payments`"),
-					Rows: sqlmock.NewRows([]string{"id", "order_id"}).AddRow(1, 1),
-				},
-			},
 		},
 	}
 
 	for _, testCase := range testCases {
 		s.T().Run(testCase.Name, func(t *testing.T) {
-			for _, query := range testCase.Queries {
-				s.mock.ExpectQuery(query.Raw).WillReturnRows(query.Rows)
-			}
+			testCase.ExpectedFunc()
 
 			bodyReader := new(bytes.Reader)
 			if testCase.Body != nil {

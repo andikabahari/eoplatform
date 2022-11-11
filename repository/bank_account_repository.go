@@ -19,7 +19,7 @@ type bankAccountRepository struct {
 	db *gorm.DB
 }
 
-func NewBankAccountRepository(db *gorm.DB) *bankAccountRepository {
+func NewBankAccountRepository(db *gorm.DB) BankAccountRepository {
 	return &bankAccountRepository{db}
 }
 

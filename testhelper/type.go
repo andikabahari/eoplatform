@@ -1,4 +1,4 @@
-package test
+package testhelper
 
 import (
 	"database/sql/driver"
@@ -7,13 +7,13 @@ import (
 	"github.com/DATA-DOG/go-sqlmock"
 )
 
-type query struct {
+type Query struct {
 	Raw  string
 	Args []driver.Value
 	Rows *sqlmock.Rows
 }
 
-type pathParam struct {
+type PathParam struct {
 	Names  []string
 	Values []string
 }

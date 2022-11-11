@@ -8,7 +8,7 @@ import (
 )
 
 type FeedbackRepository interface {
-	Get(feedbacks *model.Feedback, toUserID string)
+	Get(feedbacks *[]model.Feedback, toUserID string)
 	Create(feedback *model.Feedback)
 	GetFeedbacksCount(fromUserID, toUserID any) int
 	GetOrdersCount(fromUserID, toUserID any) int
@@ -18,7 +18,7 @@ type feedbackRepository struct {
 	db *gorm.DB
 }
 
-func NewFeedbackRepository(db *gorm.DB) *feedbackRepository {
+func NewFeedbackRepository(db *gorm.DB) FeedbackRepository {
 	return &feedbackRepository{db}
 }
 

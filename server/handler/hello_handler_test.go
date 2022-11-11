@@ -1,42 +1,37 @@
-package test
+package handler
 
 import (
 	"bytes"
-	"database/sql"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
 
-	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/andikabahari/eoplatform/server"
-	"github.com/andikabahari/eoplatform/server/handler"
-	"github.com/andikabahari/eoplatform/test/testhelper"
+	"github.com/andikabahari/eoplatform/testhelper"
 	"github.com/stretchr/testify/suite"
 )
 
-type helloSuite struct {
+type helloHandlerSuite struct {
 	suite.Suite
-	mock    sqlmock.Sqlmock
 	server  *server.Server
-	handler *handler.HelloHandler
+	handler *HelloHandler
 }
 
-func (s *helloSuite) SetupSuite() {
+func (s *helloHandlerSuite) SetupSuite() {
 	os.Setenv("APP_ENV", "production")
 
-	var conn *sql.DB
-	conn, s.mock = testhelper.Mock()
+	conn, _ := testhelper.Mock()
 	s.server = testhelper.NewServer(conn)
-	s.handler = handler.NewHelloHandler(s.server)
+	s.handler = NewHelloHandler(s.server)
 }
 
-func TestHelloSuite(t *testing.T) {
-	suite.Run(t, new(helloSuite))
+func TestHelloHandlerSuite(t *testing.T) {
+	suite.Run(t, new(helloHandlerSuite))
 }
 
-func (s *helloSuite) TestGreeting() {
+func (s *helloHandlerSuite) TestGreeting() {
 	testCases := []struct {
 		Name         string
 		Endpoint     string
