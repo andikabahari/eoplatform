@@ -105,3 +105,15 @@ func (mr *MockOrderRepositoryMockRecorder) GetOrdersForOrganizer(orders, userID 
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOrdersForOrganizer", reflect.TypeOf((*MockOrderRepository)(nil).GetOrdersForOrganizer), orders, userID)
 }
+
+// Save mocks base method.
+func (m *MockOrderRepository) Save(order *model.Order) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "Save", order)
+}
+
+// Save indicates an expected call of Save.
+func (mr *MockOrderRepositoryMockRecorder) Save(order interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Save", reflect.TypeOf((*MockOrderRepository)(nil).Save), order)
+}

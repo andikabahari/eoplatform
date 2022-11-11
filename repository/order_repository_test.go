@@ -82,3 +82,11 @@ func (s *orderRepositorySuite) TestDelete() {
 	s.mock.ExpectCommit()
 	s.repository.Delete(&model.Order{Model: gorm.Model{ID: 1}})
 }
+
+func (s *orderRepositorySuite) TestSave() {
+	query := regexp.QuoteMeta("INSERT INTO `orders`")
+	s.mock.ExpectBegin()
+	s.mock.ExpectExec(query).WillReturnResult(sqlmock.NewResult(1, 1))
+	s.mock.ExpectCommit()
+	s.repository.Save(&model.Order{})
+}

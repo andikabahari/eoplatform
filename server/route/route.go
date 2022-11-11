@@ -55,14 +55,14 @@ func Setup(server *s.Server) {
 	serviceV1.DELETE("/:id", serviceHandler.DeleteService, auth)
 
 	orderV1 := v1.Group("/orders")
-	orderHandler := handler.NewOrderHandler(
-		server,
+	orderUsecase := usecase.NewOrderUsecase(
 		orderRepository,
 		paymentRepository,
 		userRepository,
 		serviceRepository,
 		bankAccountRepository,
 	)
+	orderHandler := handler.NewOrderHandler(orderUsecase)
 	orderV1.GET("", orderHandler.GetOrders, auth)
 	orderV1.POST("", orderHandler.CreateOrder, auth)
 	orderV1.POST("/:id/accept", orderHandler.AcceptOrCompleteOrder, auth)
