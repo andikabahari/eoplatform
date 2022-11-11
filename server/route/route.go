@@ -2,12 +2,21 @@ package route
 
 import (
 	"github.com/andikabahari/eoplatform/helper"
+	"github.com/andikabahari/eoplatform/repository"
 	s "github.com/andikabahari/eoplatform/server"
 	"github.com/andikabahari/eoplatform/server/handler"
+	"github.com/andikabahari/eoplatform/usecase"
 	"github.com/labstack/echo/v4/middleware"
 )
 
 func Setup(server *s.Server) {
+	userRepository := repository.NewUserRepository(server.DB)
+	bankAccountRepository := repository.NewBankAccountRepository(server.DB)
+	serviceRepository := repository.NewServiceRepository(server.DB)
+	orderRepository := repository.NewOrderRepository(server.DB)
+	paymentRepository := repository.NewPaymentRepository(server.DB)
+	feedbackRepository := repository.NewFeedbackRepository(server.DB)
+
 	server.Echo.Use(middleware.Recover())
 	server.Echo.Use(middleware.Logger())
 
@@ -21,38 +30,56 @@ func Setup(server *s.Server) {
 
 	v1 := server.Echo.Group("/v1")
 
-	registerHandler := handler.NewRegisterHandler(server)
+	registerUsecase := usecase.NewRegisterUsecase(userRepository)
+	registerHandler := handler.NewRegisterHandler(registerUsecase)
 	v1.POST("/register", registerHandler.Register)
 
-	loginHandler := handler.NewLoginHandler(server)
+	loginUsecase := usecase.NewLoginUsecase(userRepository)
+	loginHandler := handler.NewLoginHandler(loginUsecase)
 	v1.POST("/login", loginHandler.Login)
 
-	accountHandler := handler.NewAccountHandler(server)
-	v1.GET("/account", accountHandler.GetAccount, auth)
-	v1.PUT("/account", accountHandler.UpdateAccount, auth)
-	v1.PUT("/account/password", accountHandler.ResetPassword, auth)
+	accountV1 := v1.Group("/account")
+	accountUsecase := usecase.NewAccountUsecase(userRepository)
+	accountHandler := handler.NewAccountHandler(accountUsecase)
+	accountV1.GET("", accountHandler.GetAccount, auth)
+	accountV1.PUT("", accountHandler.UpdateAccount, auth)
+	accountV1.PUT("/password", accountHandler.ResetPassword, auth)
 
-	serviceHandler := handler.NewServiceHandler(server)
-	v1.GET("/services", serviceHandler.GetServices)
-	v1.GET("/services/:id", serviceHandler.FindService)
-	v1.POST("/services", serviceHandler.CreateService, auth)
-	v1.PUT("/services/:id", serviceHandler.UpdateService, auth)
-	v1.DELETE("/services/:id", serviceHandler.DeleteService, auth)
+	serviceV1 := v1.Group("/services")
+	serviceUsecase := usecase.NewServiceUsecase(serviceRepository)
+	serviceHandler := handler.NewServiceHandler(serviceUsecase)
+	serviceV1.GET("", serviceHandler.GetServices)
+	serviceV1.GET("/:id", serviceHandler.FindService)
+	serviceV1.POST("", serviceHandler.CreateService, auth)
+	serviceV1.PUT("/:id", serviceHandler.UpdateService, auth)
+	serviceV1.DELETE("/:id", serviceHandler.DeleteService, auth)
 
-	orderHandler := handler.NewOrderHandler(server)
-	v1.GET("/orders", orderHandler.GetOrders, auth)
-	v1.POST("/orders", orderHandler.CreateOrder, auth)
-	v1.POST("/orders/:id/accept", orderHandler.AcceptOrCompleteOrder, auth)
-	v1.POST("/orders/:id/complete", orderHandler.AcceptOrCompleteOrder, auth)
-	v1.POST("/orders/:id/cancel", orderHandler.CancelOrder, auth)
+	orderV1 := v1.Group("/orders")
+	orderUsecase := usecase.NewOrderUsecase(
+		orderRepository,
+		paymentRepository,
+		userRepository,
+		serviceRepository,
+		bankAccountRepository,
+	)
+	orderHandler := handler.NewOrderHandler(orderUsecase)
+	orderV1.GET("", orderHandler.GetOrders, auth)
+	orderV1.POST("", orderHandler.CreateOrder, auth)
+	orderV1.POST("/:id/accept", orderHandler.AcceptOrCompleteOrder, auth)
+	orderV1.POST("/:id/complete", orderHandler.AcceptOrCompleteOrder, auth)
+	orderV1.POST("/:id/cancel", orderHandler.CancelOrder, auth)
 	v1.POST("/MDDRlkYVFm9QOLK08MDp", orderHandler.PaymentStatus)
 
-	bankAccountHandler := handler.NewBankAccountHandler(server)
-	v1.GET("/bank-accounts", bankAccountHandler.GetBankAccounts, auth)
-	v1.POST("/bank-accounts", bankAccountHandler.CreateBankAccount, auth)
-	v1.PUT("/bank-accounts", bankAccountHandler.UpdateBankAccount, auth)
+	bankAccountV1 := v1.Group("/bank-accounts")
+	bankAccountUsecase := usecase.NewBankAccountUsecase(bankAccountRepository)
+	bankAccountHandler := handler.NewBankAccountHandler(bankAccountUsecase)
+	bankAccountV1.GET("", bankAccountHandler.GetBankAccounts, auth)
+	bankAccountV1.POST("", bankAccountHandler.CreateBankAccount, auth)
+	bankAccountV1.PUT("", bankAccountHandler.UpdateBankAccount, auth)
 
-	feedbackHandler := handler.NewFeedbackHandler(server)
-	v1.GET("/feedbacks", feedbackHandler.GetFeedbacks)
-	v1.POST("/feedbacks", feedbackHandler.CreateFeedback, auth)
+	feedbackV1 := v1.Group("/feedbacks")
+	feedbackUsecase := usecase.NewFeedbackUsecase(feedbackRepository, userRepository)
+	feedbackHandler := handler.NewFeedbackHandler(feedbackUsecase)
+	feedbackV1.GET("", feedbackHandler.GetFeedbacks)
+	feedbackV1.POST("", feedbackHandler.CreateFeedback, auth)
 }

@@ -9,7 +9,7 @@ import (
 type PaymentRepository interface {
 	Create(payment *model.Payment)
 	Update(payment *model.Payment, req *request.MidtransTransactionNotificationRequest)
-	GetOnlyByOrderID(payments *model.Payment, orderID any)
+	GetOnlyByOrderID(payments *[]model.Payment, orderID any)
 	FindOnlyByOrderID(payment *model.Payment, orderID any)
 }
 
@@ -17,7 +17,7 @@ type paymentRepository struct {
 	db *gorm.DB
 }
 
-func NewPaymentRepository(db *gorm.DB) *paymentRepository {
+func NewPaymentRepository(db *gorm.DB) PaymentRepository {
 	return &paymentRepository{db}
 }
 

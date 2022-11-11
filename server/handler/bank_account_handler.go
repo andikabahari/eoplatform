@@ -5,20 +5,19 @@ import (
 
 	"github.com/andikabahari/eoplatform/helper"
 	"github.com/andikabahari/eoplatform/model"
-	"github.com/andikabahari/eoplatform/repository"
 	"github.com/andikabahari/eoplatform/request"
 	"github.com/andikabahari/eoplatform/response"
-	s "github.com/andikabahari/eoplatform/server"
+	u "github.com/andikabahari/eoplatform/usecase"
 	"github.com/golang-jwt/jwt"
 	"github.com/labstack/echo/v4"
 )
 
 type BankAccountHandler struct {
-	server *s.Server
+	usecase u.BankAccountUsecase
 }
 
-func NewBankAccountHandler(server *s.Server) *BankAccountHandler {
-	return &BankAccountHandler{server}
+func NewBankAccountHandler(usecase u.BankAccountUsecase) *BankAccountHandler {
+	return &BankAccountHandler{usecase}
 }
 
 func (h *BankAccountHandler) GetBankAccounts(c echo.Context) error {
@@ -33,8 +32,7 @@ func (h *BankAccountHandler) GetBankAccounts(c echo.Context) error {
 	}
 
 	bankAccount := model.BankAccount{}
-	bankAccountRepository := repository.NewBankAccountRepository(h.server.DB)
-	bankAccountRepository.FindByUserID(&bankAccount, claims.ID)
+	h.usecase.GetBankAccount(claims, &bankAccount)
 
 	return c.JSON(http.StatusOK, echo.Map{
 		"message": "fetch bank account successful",
@@ -67,12 +65,7 @@ func (h *BankAccountHandler) CreateBankAccount(c echo.Context) error {
 	}
 
 	bankAccount := model.BankAccount{}
-	bankAccount.Bank = req.Bank
-	bankAccount.VANumber = req.VANumber
-	bankAccount.UserID = claims.ID
-
-	bankAccountRepository := repository.NewBankAccountRepository(h.server.DB)
-	bankAccountRepository.Create(&bankAccount)
+	h.usecase.CreateBankAccount(claims, &bankAccount, &req)
 
 	return c.JSON(http.StatusOK, echo.Map{
 		"message": "create bank account successful",
@@ -98,17 +91,14 @@ func (h *BankAccountHandler) UpdateBankAccount(c echo.Context) error {
 	claims := userToken.Claims.(*helper.JWTCustomClaims)
 
 	bankAccount := model.BankAccount{}
-	bankAccountRepository := repository.NewBankAccountRepository(h.server.DB)
-	bankAccountRepository.FindByUserID(&bankAccount, claims.ID)
 
-	if bankAccount.ID == 0 {
-		return c.JSON(http.StatusNotFound, echo.Map{
+	if apiError := h.usecase.UpdateBankAccount(claims, &bankAccount, &req); apiError != nil {
+		code, message := apiError.APIError()
+		return c.JSON(code, echo.Map{
 			"message": "update bank account failure",
-			"error":   "bank account not found",
+			"error":   message,
 		})
 	}
-
-	bankAccountRepository.Update(&bankAccount, &req)
 
 	return c.JSON(http.StatusOK, echo.Map{
 		"message": "update bank account successful",

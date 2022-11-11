@@ -1,51 +1,60 @@
-package test
+package handler
 
 import (
 	"bytes"
-	"database/sql"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"regexp"
 	"testing"
 
-	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/andikabahari/eoplatform/helper"
 	"github.com/andikabahari/eoplatform/request"
 	"github.com/andikabahari/eoplatform/server"
-	"github.com/andikabahari/eoplatform/server/handler"
-	"github.com/andikabahari/eoplatform/test/testhelper"
+	"github.com/andikabahari/eoplatform/testhelper"
+	mu "github.com/andikabahari/eoplatform/usecase/mock_usecase"
 	"github.com/golang-jwt/jwt"
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/suite"
 )
 
-type bankAccountSuite struct {
+type bankAccountHandlerSuite struct {
 	suite.Suite
-	mock    sqlmock.Sqlmock
+
+	ctrl    *gomock.Controller
+	usecase *mu.MockBankAccountUsecase
+
 	server  *server.Server
-	handler *handler.BankAccountHandler
+	handler *BankAccountHandler
 }
 
-func (s *bankAccountSuite) SetupSuite() {
+func (s *bankAccountHandlerSuite) SetupSuite() {
 	os.Setenv("APP_ENV", "production")
 
-	var conn *sql.DB
-	conn, s.mock = testhelper.Mock()
+	s.ctrl = gomock.NewController(s.T())
+	s.usecase = mu.NewMockBankAccountUsecase(s.ctrl)
+
+	conn, _ := testhelper.Mock()
 	s.server = testhelper.NewServer(conn)
-	s.handler = handler.NewBankAccountHandler(s.server)
+	s.handler = NewBankAccountHandler(s.usecase)
 }
 
-func TestBankAccountSuite(t *testing.T) {
-	suite.Run(t, new(bankAccountSuite))
+func (s *bankAccountHandlerSuite) TearDownSuite() {
+	s.ctrl.Finish()
 }
 
-func (s *bankAccountSuite) TestGetBankAccounts() {
+func TestBankAccountHandlerSuite(t *testing.T) {
+	suite.Run(t, new(bankAccountHandlerSuite))
+}
+
+func (s *bankAccountHandlerSuite) TestGetBankAccounts() {
 	testCases := []struct {
 		Name         string
 		Endpoint     string
 		Method       string
 		Body         any
+		Token        *jwt.Token
+		ExpectedFunc func()
 		ExpectedCode int
 	}{
 		{
@@ -53,6 +62,8 @@ func (s *bankAccountSuite) TestGetBankAccounts() {
 			"/v1/bank-accounts",
 			http.MethodGet,
 			nil,
+			jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{}),
+			func() {},
 			http.StatusUnauthorized,
 		},
 		{
@@ -60,12 +71,18 @@ func (s *bankAccountSuite) TestGetBankAccounts() {
 			"/v1/bank-accounts",
 			http.MethodGet,
 			nil,
+			jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{ID: 1, Role: "organizer"}),
+			func() {
+				s.usecase.EXPECT().GetBankAccount(gomock.Any(), gomock.Any())
+			},
 			http.StatusOK,
 		},
 	}
 
 	for _, testCase := range testCases {
 		s.T().Run(testCase.Name, func(t *testing.T) {
+			testCase.ExpectedFunc()
+
 			bodyReader := new(bytes.Reader)
 			if testCase.Body != nil {
 				body, err := json.Marshal(testCase.Body)
@@ -73,25 +90,11 @@ func (s *bankAccountSuite) TestGetBankAccounts() {
 				bodyReader = bytes.NewReader(body)
 			}
 
-			claims := new(helper.JWTCustomClaims)
-
-			if testCase.ExpectedCode == http.StatusUnauthorized {
-				claims = &helper.JWTCustomClaims{}
-			}
-
-			if testCase.ExpectedCode == http.StatusOK {
-				claims = &helper.JWTCustomClaims{
-					Role: "organizer",
-				}
-			}
-
-			token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-
 			req := httptest.NewRequest(testCase.Method, testCase.Endpoint, bodyReader)
 			req.Header.Set("Content-Type", "application/json")
 			rec := httptest.NewRecorder()
 			ctx := s.server.Echo.NewContext(req, rec)
-			ctx.Set("user", token)
+			ctx.Set("user", testCase.Token)
 
 			s.NoError(s.handler.GetBankAccounts(ctx))
 			s.Equal(testCase.ExpectedCode, rec.Code)
@@ -99,12 +102,14 @@ func (s *bankAccountSuite) TestGetBankAccounts() {
 	}
 }
 
-func (s *bankAccountSuite) TestCreateBankAccount() {
+func (s *bankAccountHandlerSuite) TestCreateBankAccount() {
 	testCases := []struct {
 		Name         string
 		Endpoint     string
 		Method       string
 		Body         *request.CreateBankAccountRequest
+		Token        *jwt.Token
+		ExpectedFunc func()
 		ExpectedCode int
 	}{
 		{
@@ -112,6 +117,8 @@ func (s *bankAccountSuite) TestCreateBankAccount() {
 			"/v1/bank-accounts",
 			http.MethodPost,
 			nil,
+			jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{}),
+			func() {},
 			http.StatusUnauthorized,
 		},
 		{
@@ -119,6 +126,8 @@ func (s *bankAccountSuite) TestCreateBankAccount() {
 			"/v1/bank-accounts",
 			http.MethodPost,
 			nil,
+			jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{ID: 1, Role: "organizer"}),
+			func() {},
 			http.StatusBadRequest,
 		},
 		{
@@ -131,12 +140,18 @@ func (s *bankAccountSuite) TestCreateBankAccount() {
 					VANumber: "12345",
 				},
 			},
+			jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{ID: 1, Role: "organizer"}),
+			func() {
+				s.usecase.EXPECT().CreateBankAccount(gomock.Any(), gomock.Any(), gomock.Any())
+			},
 			http.StatusOK,
 		},
 	}
 
 	for _, testCase := range testCases {
 		s.T().Run(testCase.Name, func(t *testing.T) {
+			testCase.ExpectedFunc()
+
 			bodyReader := new(bytes.Reader)
 			if testCase.Body != nil {
 				body, err := json.Marshal(testCase.Body)
@@ -144,32 +159,11 @@ func (s *bankAccountSuite) TestCreateBankAccount() {
 				bodyReader = bytes.NewReader(body)
 			}
 
-			claims := new(helper.JWTCustomClaims)
-
-			if testCase.ExpectedCode == http.StatusUnauthorized {
-				claims = &helper.JWTCustomClaims{}
-			}
-
-			if testCase.ExpectedCode == http.StatusBadRequest {
-				claims = &helper.JWTCustomClaims{
-					Role: "organizer",
-				}
-			}
-
-			if testCase.ExpectedCode == http.StatusOK {
-				claims = &helper.JWTCustomClaims{
-					ID:   1,
-					Role: "organizer",
-				}
-			}
-
-			token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-
 			req := httptest.NewRequest(testCase.Method, testCase.Endpoint, bodyReader)
 			req.Header.Set("Content-Type", "application/json")
 			rec := httptest.NewRecorder()
 			ctx := s.server.Echo.NewContext(req, rec)
-			ctx.Set("user", token)
+			ctx.Set("user", testCase.Token)
 
 			s.NoError(s.handler.CreateBankAccount(ctx))
 			s.Equal(testCase.ExpectedCode, rec.Code)
@@ -177,12 +171,14 @@ func (s *bankAccountSuite) TestCreateBankAccount() {
 	}
 }
 
-func (s *bankAccountSuite) TestUpdateBankAccount() {
+func (s *bankAccountHandlerSuite) TestUpdateBankAccount() {
 	testCases := []struct {
 		Name         string
 		Endpoint     string
 		Method       string
 		Body         *request.UpdateBankAccountRequest
+		Token        *jwt.Token
+		ExpectedFunc func()
 		ExpectedCode int
 	}{
 		{
@@ -190,6 +186,8 @@ func (s *bankAccountSuite) TestUpdateBankAccount() {
 			"/v1/bank-accounts",
 			http.MethodPut,
 			nil,
+			jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{}),
+			func() {},
 			http.StatusBadRequest,
 		},
 		{
@@ -201,6 +199,11 @@ func (s *bankAccountSuite) TestUpdateBankAccount() {
 					Bank:     "bni",
 					VANumber: "12345",
 				},
+			},
+			jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{}),
+			func() {
+				apiError := helper.NewAPIError(http.StatusNotFound, "")
+				s.usecase.EXPECT().UpdateBankAccount(gomock.Any(), gomock.Any(), gomock.Any()).Return(apiError)
 			},
 			http.StatusNotFound,
 		},
@@ -214,12 +217,18 @@ func (s *bankAccountSuite) TestUpdateBankAccount() {
 					VANumber: "12345",
 				},
 			},
+			jwt.NewWithClaims(jwt.SigningMethodHS256, &helper.JWTCustomClaims{ID: 1, Role: "organizer"}),
+			func() {
+				s.usecase.EXPECT().UpdateBankAccount(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+			},
 			http.StatusOK,
 		},
 	}
 
 	for _, testCase := range testCases {
 		s.T().Run(testCase.Name, func(t *testing.T) {
+			testCase.ExpectedFunc()
+
 			bodyReader := new(bytes.Reader)
 			if testCase.Body != nil {
 				body, err := json.Marshal(testCase.Body)
@@ -227,20 +236,11 @@ func (s *bankAccountSuite) TestUpdateBankAccount() {
 				bodyReader = bytes.NewReader(body)
 			}
 
-			claims := new(helper.JWTCustomClaims)
-
-			if testCase.ExpectedCode == http.StatusOK {
-				query := regexp.QuoteMeta("SELECT * FROM `bank_accounts`")
-				s.mock.ExpectQuery(query).WillReturnRows(s.mock.NewRows([]string{"id"}).AddRow(1))
-			}
-
-			token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-
 			req := httptest.NewRequest(testCase.Method, testCase.Endpoint, bodyReader)
 			req.Header.Set("Content-Type", "application/json")
 			rec := httptest.NewRecorder()
 			ctx := s.server.Echo.NewContext(req, rec)
-			ctx.Set("user", token)
+			ctx.Set("user", testCase.Token)
 
 			s.NoError(s.handler.UpdateBankAccount(ctx))
 			s.Equal(testCase.ExpectedCode, rec.Code)
